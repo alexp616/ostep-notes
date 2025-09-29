@@ -1,0 +1,47 @@
+\chapter{Introduction}
+
+Von Neumann model of computing: fetch instruction $\rightarrow$ decode instruction $\rightarrow$ execute instruction.
+
+The Operating System is a piece of software that makes it easy to run programs. It does this through \textbf{virtualization} - taking a physical resource and transforming it into an easier-to-use virtual version of itself.
+
+Programs interact with the OS through an API of \textbf{system calls}.
+
+The OS has the responsibility to manage and distribute resources.
+
+\section{Virtualizing the CPU \& Virtualizing Memory}
+
+The OS virtualizes the CPU, making programs believe they have their own CPU.
+
+The OS uses policies to determine which process gets a resource at what time.
+
+The OS virtualizes memory, making giving programs their own virtual address space.
+
+Virtual address spaces are usually randomized to protect against stack smashing attacks.
+
+\section{Concurrency}
+
+Not much to say (yet!!!!).
+
+\section{Persistence}
+
+The \textbf{file system} is the part of the operating system that is responsible for managing persistent files.
+
+The disk is not virtualized for every application, since applications usually want to share files between each other.
+
+\textbf{Journaling} and \textbf{copy-on-write} are protocols that ensure that the state of a write to disk can be recovered even if the system crashes.
+
+\section{Design Goals}
+
+\textbf{Abstraction} as a concept means to do something without doing its underlying implementation, like writing a C file and not needing to write assembly, or writing assembly and not needing to write binary.
+
+Operating systems need to perform tradeoffs for performance, protection, reliability, energy-efficiency, security, and mobility.
+
+\section{Some History}
+
+In the beginning, only one process could run at a time, and the user decided when to run each process. This is called batch processing.
+
+User applications run in \textbf{user mode}, and can enter \textbf{kernel mode} through system calls. When a system call is made, a \textbf{trap} instruction is called, and the hardware transfers control to a \textbf{trap handler}, which starts kernel mode. When the operation is done, the OS passes control back to the user with a \textbf{return-from-trap} instruction, and kernel mode is stopped.
+
+\textbf{Multiprogramming} is when the OS loads a number of processes into memory and switches rapidly between them, giving the illusion of running multiple processes at once.
+
+\section{Summary}

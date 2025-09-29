@@ -1,0 +1,119 @@
+\documentclass[12pt, openany]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{geometry}
+\usepackage{mlmodern}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\geometry{margin=1in}
+
+\titlespacing*{\chapter}{0pt}{-20pt}{10pt}
+\titlespacing\section{0pt}{0pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{0pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{0pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titleformat{\section}
+  {\fontsize{14}{16}\bfseries}
+  {\thesection}
+  {1em}
+  {}
+  []
+\titleformat{\chapter}
+  {\fontsize{24}{26}\bfseries}
+  {}
+  {0em}
+  {}
+  []
+
+\pagestyle{plain}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+\lstnewenvironment{codeblock}
+{
+  \lstset{
+    basicstyle=\ttfamily,
+    breaklines=true,
+    columns=fullflexible,
+    frame=single,
+    backgroundcolor=\color{gray!10}
+  }
+}{}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
+
+\setlist{nosep}
+
+\title{Notes on Operating Systems - Three Easy Pieces}
+\author{Alex Pan}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+% Intro
+\include{chapters/ch2.tex}
+% CPU Virtualization
+\include{chapters/ch4.tex}
+\include{chapters/ch5.tex}
+\include{chapters/ch6.tex}
+\include{chapters/ch7.tex}
+\include{chapters/ch8.tex}
+\include{chapters/ch9.tex}
+\include{chapters/ch10.tex}
+% Memory Virtualization
+\include{chapters/ch13.tex}
+\include{chapters/ch14.tex}
+\include{chapters/ch15.tex}
+\include{chapters/ch16.tex}
+\include{chapters/ch17.tex}
+\include{chapters/ch18.tex}
+\include{chapters/ch19.tex}
+\include{chapters/ch20.tex}
+\include{chapters/ch21.tex}
+\include{chapters/ch22.tex}
+\include{chapters/ch23.tex}
+% Concurrency
+% \include{chapters/ch26.tex}
+% \include{chapters/ch27.tex}
+% \include{chapters/ch28.tex}
+% \include{chapters/ch29.tex}
+% \include{chapters/ch30.tex}
+% \include{chapters/ch31.tex}
+% \include{chapters/ch32.tex}
+% \include{chapters/ch33.tex}
+% Persistence
+% \include{chapters/ch36.tex}
+% \include{chapters/ch37.tex}
+% \include{chapters/ch38.tex}
+% \include{chapters/ch39.tex}
+% \include{chapters/ch40.tex}
+% \include{chapters/ch41.tex}
+% \include{chapters/ch42.tex}
+% \include{chapters/ch43.tex}
+% \include{chapters/ch44.tex}
+% \include{chapters/ch45.tex}
+% \include{chapters/ch48.tex}
+% \include{chapters/ch49.tex}
+% \include{chapters/ch50.tex}
+% Security
+% \include{chapters/ch53.tex}
+% \include{chapters/ch54.tex}
+% \include{chapters/ch55.tex}
+% \include{chapters/ch56.tex}
+% \include{chapters/ch57.tex}
+
+
+\end{document}
+
+

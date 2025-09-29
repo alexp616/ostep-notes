@@ -1,0 +1,53 @@
+\chapter{Free Space Management}
+
+\textbf{Free space management} is a problem that arises in process heaps and virtualizing memory with segmentation. When variable size buffers are allocated and freed, \textbf{external fragmentation} occurs.
+
+An example of external fragmentation is if we have a continuous region of 10 bytes free, 10 byte occupied, and 10 bytes freed. 20 bytes are free, but a process cannot allocate 20 bytes, since the free regions are separated.
+
+An \textbf{allocator} is a mechanism that hands out and reclaims chunks of memory on request. They exist at multiple levels - process-level allocators manage the process' own heap, kernel-level allocators manage pages. This chapter is about process-level allocators.
+
+\section{Assumptions}
+
+\begin{itemize}
+    \item A user has a simple interface to the memory, like \code{malloc()} and \code{free()}.
+    \item We are concerned with external fragmentation. \textbf{Internal fragmentation} is when an allocator returns memory bigger than requested.
+    \item Once a process allocates memory, nothing can move it until the process frees the memory (or the process gets killed). This means \textbf{compaction}, as defined the last chapter, can't be used.
+    \item The allocator manages a fixed-size continuous region of bytes.
+\end{itemize}
+
+Unlike assumptions lists of previous chapters, like CPU scheduling, these are all actually reasonable besides the last one.
+
+\section{Low-level Mechanisms \& Basic Strategies}
+
+When an allocator receives a request for memory, it can \textbf{split} a free block into two smaller blocks, and return a pointer to one of the blocks of memory.
+
+When an allocator receives a request to free memory, it can \textbf{coalesce} neighboring free blocks into a larger free block.
+
+Blocks of memory also contain a header, which is just metadata at the front that describes how large the block of memory is, and whether it is free or not. This is also how \code{free()} knows exactly how many bytes to free.
+
+This makes the blocks of memory a linked list - to get from one block to the next, just add the size of the header and how big the current block is.
+
+If no more space is free, then an allocator can either grow the heap by requesting more memory (\code{sbrk} system call), or returning \code{NULL}.
+
+Here are some strategies an allocator can use. When a strategy finds a chunk, it splits it if the chunk is too big.
+
+\begin{itemize}
+    \item The \textbf{best fit} strategy has the allocator find the smallest free chunk with size bigger than or equal to the requested memory. Performance sucks, since the entire heap needs to be searched.
+    \item The \textbf{worst fit} strategy has the allocator find the largest free chunk. The entire heap needs to be searched again, and severe fragmentation occurs.
+    \item The \textbf{first fit} strategy has the allocator find the first chunk large enough. Performance is good, but the front of the list becomes filled with small objects.
+    \item The \textbf{next fit} strategy uses first fit as a subroutine, but starts each new search from where the last one left off. This makes fragmentation and object distribution more uniform.
+\end{itemize}
+
+\section{Other Approaches \& Ideas}
+
+The \textbf{segregated list} idea involves maintaining a separate list if a process frequently requests memory of a constant size. Fragmentation is less common, and a linked list isn't needed. Other sized memory requests go to a general allocator as described above. Downsides are that usefulness will vary widely between different processes, so it's hard to determine how much memory should go to the general allocator and the segregated list.
+
+At boot, \textbf{slab allocator} puts commonly-used kernel objects into object caches, which are segregated lists with fast allocation and free times. When a cache needs more memory, it requests it from a more general memory allocator, and when it has excess free space, it submits it to the general memory allocator. In this way, often-used code can be allocated and freed quickly.
+
+The \textbf{binary buddy allocator} recursively divides memory into two equally-sized chunks called buddies until a chunk's size is \code{nextpow2(requested\_size)}. When a chunk is freed, coalescing is as simple as checking if its buddy is free, and this is propagated up the binary buddy tree. This suffers from internal fragmentation. Buddies are easy to find, since pointers of buddies at different levels will always differ by a specific bit.
+
+Linked lists scale horribly, so advanced allocators use data structures like balanced binary trees, splay trees, or partially-ordered trees.
+
+TODO: Read about how the glibc allocator works.
+
+\section{Summary}

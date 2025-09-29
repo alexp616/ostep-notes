@@ -1,0 +1,45 @@
+\chapter{Process API}
+
+UNIX systems allows processes to create other processes with \code{fork()} and \code{exec()}, and to wait for a process' completion with \code{wait()}.
+
+Every process has a \textbf{process identifier}, or \textbf{PID}.
+
+\section{The \code{fork()}, \code{wait()}, and \code{exec()} System Calls}
+
+\code{fork()} creates an almost exact copy of the calling process. The main difference is that the result of the \code{fork()} call in the parent process is PID of the child process, and in the child process it is 0.
+
+Not stated in the chapter, but the child process has virtually the same stack, heap, and page tables as the parent. In reality, no information is duplicated until the child tries to write something to memory. When this happens, the OS uses copy-on-write to duplicate modified pages.
+
+\code{wait()}, when called in a parent process after fork, blocks it from running until the child process finishes executing.
+
+\code{exec()} takes in an executable and arguments, loads code and static data from the executable, and overwrites the process' current code segment, as well as its stack, heap and other parts of its memory. It effectively replaces the current process with the process passed into \code{exec()}.
+
+\section{Why? Motivating the API}
+
+The combination of \code{fork()}, \code{wait()}, and \code{exec()} is very powerful - after all, everything in UNIX is written with these.
+
+The shell works by taking a user input, calling \code{fork()} to create a child process, and calling \code{wait()}. The child process then runs \code{exec()} on the user input, becoming the requested process. When the child exits, the shell's \code{wait()} blocker gets lifted, and is ready to take user input again.
+
+Open file descriptors are kept across \code{exec()} calls. This allows for UNIX's redirection. In the following code:
+
+\begin{codeblock}
+close(STDOUT_FILENO);
+open("out.txt", O_CREAT|O_WRONLY|O_TRUNC, S_IRWXU);
+execvp(proc);
+\end{codeblock}
+
+The parent process' stdout is closed, and \code{out.txt} is opened. Since the stdout file descriptor is free, \code{out.txt} takes stdout's place, and the output of \code{proc} will be redirected to the \code{out.txt}.
+
+\section{Process Control And Users}
+
+The \code{kill()} system call sends \textbf{signals} to a process. <C-c> in the terminal sends SIGINT (interrupt), and <C-z> (stop) sigmal pauses the process.
+
+Processes can use the \code{signal()} system call to catch signals.
+
+\section{Useful Tools}
+
+Go read the manuals of \code{ps, top, kill, killall}.
+
+\section{Summary}
+
+\code{fork()} has problems, and some researchers advocate for \code{spawn()} to start new processes.

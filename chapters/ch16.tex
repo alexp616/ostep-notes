@@ -1,0 +1,45 @@
+\chapter{Segmentation}
+
+Dynamic relocation, with the base and bounds registers, cannot support address spaces larger than physical memory, and is inefficient for the free space of a process between its stack and heap.
+
+\section{Segmentation: Generalized Base/Bounds}
+
+Instead of just one pair of base and bounds for the entire process, maintain a list of base and bounds for each independent memory segment (code, stack, heap, etc.) Now, a process' virtual memory doesn't have to map continuously onto physical memory. Assuming code, stack, and heap are the only three things a program needs to store, our MMU can be expanded to have 3 pairs of base and bounds registers.
+
+If a process tries to access a virtual address that isn't in any of its segments, then it causes a \textbf{segmentation violation}, or a \textbf{segmentation fault}.
+
+\section{Which Segment Are We Referring To?}
+
+Two ways of figuring out which segment an address belongs to are the \textbf{explicit} and \textbf{implicit} approaches.
+
+With the explicit approach, the segment is encoded in the first few bits. Since we have three segments, the first two bits determine which segment a virtual address belongs to.
+
+With the implicit approach, hardware figures out what part of the process the virtual address came from. If the address is an instruction fetch, then it is in the code segment, if the address is an offset from the stack pointer, then it is in the stack segment, and otherwise it's in the heap segment.
+
+\section{What About The Stack?}
+
+The stack grows backwards towards lower addresses, and the heap grows towards higher addresses. So, another bit needs to be added in registers to determine whether a segment grows positively or negatively.
+
+\section{Support for Sharing}
+
+System designers discovered that it was efficient to share certain segments between address spaces. For example, the same physical code segment can be shared across multiple identical processes while maintaining the illusion of a private address space.
+
+To implement this securely, more bits need to be added to the hardware to verify whether a program can read or write to the segment it's accessing.
+
+\section{Fine-grained vs. coarse-grained Segmentation}
+
+Splitting an address space into 3 large continuous segments as we are now is called \textbf{coarse-grained} segmentation. \textbf{Fine-grained} segmentation involves a large number of small segments. This requires a \textbf{segment table} for efficient conversions of memory to segments.
+
+\section{OS Support}
+
+The virtual address space of a process is still the same, the space between the stack and the heap still exist, it just hasn't actually been allocated and mapped onto physical memory yet.
+
+The heap doesn't always grow when \code{malloc()} is called. If the existing heap has enough space for the requested memory then a pointer to that is returned. If not, then the memory allocation library performs the \code{sbrk()} system call to grow the heap. If the process' heap is already too large or if there is no more physical memory, then the OS rejects the request. Otherwise, the OS updates segment size registers, and allows more memory to be alloted.
+
+With segmentation approaches, physical memory becomes \textbf{externally fragmented}, or filled with many small free holes that are unusuable for a large allocation.
+
+\section{Summary}
+
+One issue with segmentation is that they are variable-sized, since memory becomes fragmented over time.
+
+Another issue is that segmentation can't support our ideal sparse address space. For example, if a process' heap is big but sparsely used, then the entire heap still has to be stored in physical memory, which is very inefficient.

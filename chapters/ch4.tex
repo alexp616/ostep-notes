@@ -1,0 +1,71 @@
+\chapter{Processes}
+
+A \textbf{process} is a \textbf{running program}. A program is just a bunch of lines of code that can be run.
+
+An OS creates an illusion of each process having its own CPU by \textbf{virtualizing} the CPU through a technique called \textbf{time sharing}, where CPU time is independently shared between each running process.
+
+\textbf{Policies} are algorithms that the OS uses to make decisions. The OS uses a \textbf{scheduling policy} to determine which process to run on the CPU.
+
+\section{The Abstraction: A Process}
+
+The \textbf{machine state} of a process is what a process can read or update. Components are:
+\begin{itemize}
+    \item Memory, the data that a process can read and write is called its \textbf{address space}
+    \item Registers, importantly the program counter, and stack and frame pointers.
+    \item I/O information, a list of files the process currently has open.
+\end{itemize}
+
+\section{Process API}
+
+Any operating system must implement some kind of process API:
+
+\begin{itemize}
+    \item A way to \textbf{create} a process.
+    \item A way to \textbf{destroy} a process. Most processes run normally to completion and exit themselves, but a user or the OS might want to kill a running process.
+    \item A way to \textbf{wait} for a process to stop running.
+    \item Some \textbf{miscellaneous controls}, such as pausing and resuming a process.
+    \item A way to get information about the \textbf{status} of a process, such as how long it has run for, it state, and resources used. 
+\end{itemize}
+
+\section{Process Creation: A Little More Detail}
+
+To run a program, the OS has to \textbf{load} its code and static data from \textbf{disk} into its designated address space. Code and static data is stored in disk as a binary \textbf{executable}.
+
+\textbf{Eager} loading is when the entire program's code is loaded at once, \textbf{lazy} loading is when code is only loaded as needed during program execution.
+
+After loading a program's code, the OS needs to allocate and populate the process' \textbf{run-time stack} (stack). It may also allocate memory for a program's \textbf{heap}, which may grow as the process requests memory.
+
+Additionally, the OS initializes the process' three \textbf{file descriptors} - stdin, stdout, stderr.
+
+Finally, the OS jumps to the \code{main()} function of the program, and control of the CPU is given to the process.
+
+To summarize, an OS starts a process by:
+
+\begin{enumerate}
+    \item Loading code and static data from disk.
+    \item Allocating the process' stack and heap, and populating the stack.
+    \item Initializing the process' stdin, stdout, stderr.
+    \item Running the \code{main()} function of the process.
+\end{enumerate}
+
+\section{Process States}
+
+At any moment, a process can be in one of three states:
+
+\begin{itemize}
+    \item When a process is \textbf{running}, its instructions are currently begin executed by the processor.
+    \item When a process is \textbf{ready}, it is ready to run but the OS has chosen not to run it.
+    \item When a process is \textbf{blocked}, it has performed an operation that makes it not ready to run until some other event takes place, like allocating memory or file I/O.
+\end{itemize}
+
+When a process is \textbf{scheduled}, it is moved from ready to running. Likewise, when it is \textbf{descheduled}, it is moved from running to ready. When some blocking operation is called, the process moves from running to blocked, and when the operation finishes, the process moves from blocked to ready.
+
+To use these words, a process that is running can be descheduled to allow another ready process to be scheduled and start running. If process A blocks, then while the relevant device (RAM, disk, etc.) is processing its request, the OS can schedule process B, which is ready. When process A unblocks, the OS can deschedule process B and schedule process A again.
+
+\section{Data Structures}
+
+The OS maintains some kind of \textbf{process list}, with all processes and their information (\textbf{process control block (PCB)} or \textbf{process descriptor}). In a very simple operating system, this information includes \textbf{register context}, the registers of the CPU of the process at its last executed instruction, its process state, pointers to its memory or kernel stack, and more.
+
+When a process is finished, it may end up in a \textbf{zombie} state, before it is cleaned up and deleted forever, which allows other processes to examine the return code of the process.
+
+\section{Summary}

@@ -1,0 +1,29 @@
+\chapter{Address Spaces}
+
+\section{Early Systems \& Multiprogramming and Time Sharing}
+
+In early machines, two processes resided in memory: the OS (which wasn't even a process at the time, more just a loaded library), and the currently running process.
+
+Over time, more and more processes needed to be run, so \textbf{multiprogramming} and later \textbf{time sharing} as \textbf{interactivity} became important.
+
+One approach to time sharing from the memory perspective is to run a process for a bit, save all of its memory to disk, load another process' memory from disk, and run that new process. This is obviously really slow. Operating systems had to figure out a way to let multiple programs reside in memory at once.
+
+Memory protection becomes an important issue, so that processes can't read or write some other processes's memory.
+
+\section{The Address Space}
+
+The \textbf{address space} of a process is the abstraction and virtualization of physical memory. It contains all of a process' code, stack, heap, static variables, and everything else specific to the process.
+
+Importantly, the address space is not a direct mapping onto physical memory - it may or may not be discontinuous. If a process tries to load from virtual address \code{p}, the OS translates \code{p} to a physical address probably not equal to \code{p}.
+
+\section{Goals}
+
+Virtual memory should be implemented in a way that is invisible to the program - the program should behave as if it has its own private physical memory.
+
+Virtual memory should also be efficient and protected, for performance and security reasons.
+
+\section{Summary}
+
+The OS gets some dedicated hardware to help translate virtual addresses into physical addresses.
+
+Note: when \code{malloc()} is ran, space is only reserved in the virtual address space, physical memory is only allocated when the corresponding page is accessed.

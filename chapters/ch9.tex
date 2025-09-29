@@ -1,0 +1,45 @@
+\chapter{Lottery Scheduling}
+
+\textbf{Proportional-share}, or \textbf{fair-share} tries to guarantee that each job obtains a certain percentage of CPU time.
+
+\textbf{Lottery scheduling} periodically holds a lottery to determine which process gets to run. More important processe have a higher chance of winning.
+
+\section{Basic Concept: Tickets Represent Your Share \& Ticket Mechanisms}
+
+The more tickets a process has, the more often it wins the lottery. Users can be given tickets to allot to processes.
+
+Processes can initiate \textbf{ticket transfers} to other processes to pass off CPU time. This is useful in client/server settings, where a client can tranfer tickets to the server to do work.
+
+In a system where processes trust each other, \textbf{ticket inflation} can be really effective if a process accurately declares when it needs more or less CPU time by increasing or decreasing its ticket count.
+
+Randomness has no worst case, is easy to implement (!), and has very little overhead.
+
+\section{Implementation \& An Example}
+
+Implementation can be done with a linked list of processes, iterating through them, and subtracting ticket counts from a randomly generated number in $[0, totalTickets)$, and choosing the process where the number hits 0.
+
+To have the least number of iterations, the list can be sorted so the jobs with the most tickets are at the front.
+
+If two jobs have the same run time and ticket count, then the longer the run time, the more fair lottery scheduling is (common theme from probability).
+
+\section{How To Assign Tickets}
+
+One approach is to let the user assign tickets. However, the ``ticket-assignment problem'' remains open.
+
+\section{Stride Scheduling}
+
+\textbf{Stride scheduling} is a deterministic variant of lottery scheduling. A process' \textbf{stride} is inversely proportional to the number of tickets it has. A process' \textbf{pass value} is initially set to 0, and the OS maintains a priority queue to always run the job with the lowest pass value. After running, a job's pass value is incremented by its stride. So, if a process has a low stride, then its pass value grows slower, and it is run more often.
+
+Stride scheduling struggles if jobs arrive at different times. Then, newer jobs will hog the CPU until their pass value surpasses a longer-running job. Lottery scheduling doesn't struggle with this.
+
+\section{The Linux Completely Fair Scheduler (CFS)}
+
+Operating systems must try to reduce scheduling overhead as much as possible. Linux's \textbf{Completely Fair Scheduler} achieves fair-share scheduling in a highly efficient and scalable manner.
+
+Following is a very very condensed summary of the implementation described in the textbook. Go read the textbook and its linked research articles for a real understanding.
+
+As a process runs, its \code{vruntime} increases, and whenever a time slice finishes, CFS picks the process with the lowest \code{vruntime} to run next. Two parameters \code{sched\_latency} and \code{min\_granularity} control the sizes of time slices. Users can add weights to processes to increase or decrease their time slice size, and \code{vruntime} ratio. A red-black tree is used to store running jobs for efficient lookups. If a process blocks for a long time, then CFS sets its \code{vruntime} to the minimum \code{vruntime} found in the tree to prevent starvation of other jobs.
+
+\section{Summary}
+
+Different schedulers work well for different systems - the best one for a PC will not be the best one for a data center.

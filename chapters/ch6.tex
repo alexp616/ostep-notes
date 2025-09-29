@@ -1,0 +1,67 @@
+\chapter{Direct Execution}
+
+How do we virutalize the CPU without adding excessive overhead to the system?
+
+\section{Basic Technique: Limited Direct Execution}
+
+\textbf{Direct execution} is a protocol where a list of processes is maintained, and the OS iterates through the list and runs each process serially until completion.
+
+\section{Problem \#1: Restricted Operations}
+
+To prevent processes from doing whatever they like, most processes run in \textbf{user mode}, where they are restricted in what they can do.
+
+The OS runs in \textbf{kernel mode}, and it can do whatever it likes.
+
+When you do something like \code{open()} in C, it is a procedure call, and because it has a trap instruction it becomes a system call.
+
+When executing a trap in x86, the processor pushes the program counter and a few other registers onto a per-process \textbf{kernel stack}, and when return-from-trap is called, these are popped and normal execution is resumed.
+
+To prevent processes from running arbitrary code in kernel mode, the OS kernel sets up a \textbf{trap table} of \textbf{trap handlers} at boot time, which says what code should run when a system call or a hardware interrupt occurs.
+
+The \textbf{trap} instruction saves register state to the kernel stack, changes hardware status to kernel mode, and jumps to the trap table.
+
+The \textbf{return-from-trap} instruction pops registers from the kernel stack back into the CPU, changes hardware status to user mode, and jumps back to the process' current program counter.
+
+The instruction to tell hardware where trap tables are is a privileged operation.
+
+System calls are identified with \textbf{system-call numbers}. Users must specify a system call number to use, and thus cannot execute privileged instructions by jumping to some address.
+
+\textbf{Limited direct execution} is a variant of direct execution. At boot, the OS initializes a trap table. When a process is queued:
+\begin{enumerate}
+    \item The OS inserts the process into the process list, allocates memory, sets up the stack and program counter, and inserts the program counter and other registers into the kernel stack. Runs return-from-trap
+    \item The hardware pops from the kernel stack, moving the process' registers to the CPU, switches to user mode, and executes executes \code{main()}.
+    \item The process performs a system call, and runs trap.
+    \item The hardware saves the process' registers to the kernel stack, switches to kernel mode, and jumps to the trap handler (from the trap table created at boot).
+    \item The OS handles the trap, and runs return-from-trap.
+    \item The hardware pops from the kernel stack, moving the process' registers to the CPU, switches to user mode, and jumps to the current PC.
+    \item Steps 3-6 are repeated while the process runs.
+    \item Process runs \code{exit()}, and traps back to the OS.
+    \item OS frees the process' memory, and removes it from the list.
+\end{enumerate}
+
+Importantly, whenever the process runs a system call, important registers are saved to the kernel stack, the system call is performed, and the registers are popped back into the CPU.
+
+\section{Problem \#2: Switching Between Processes}
+
+With limited direct execution, only one process can run at a time, meaning even the OS itself can't run. This is a big issue if the currently running process takes very run to long or infinitely loops.
+
+The \textbf{cooperative} approach is where the OS trusts processes to give up control of the CPU periodically with a \textbf{yield} system call. The OS can also regain control when a process tries to do something illegal, which usually ends up in the process being killed.
+
+Another approach is a \textbf{timer interrupt}, where a hardware device is programmed to periodically generate an interrupt, with which the OS uses to run its own instructions.
+
+When the OS is running, it has to decide which process to continue running with a \textbf{scheduler}.
+
+If the OS decides to switch from process A to process B, it runs a \textbf{context switch}, which saves A's registers onto A's kernel stack, pops B's registers from its kernel stack into the CPU, changes the kernel stack pointer to B's kernel stack, and starts running B.
+
+\section{Worried About Concurrency?}
+
+What happens if an interrupt occurs while another interrupt is being processed?
+
+One approach the OS can take is to disable interrupts during interrupt processing, but this could lead to interrupts being lost.
+
+Another approach is \textbf{locking} schemes, which we learn about later.
+
+\section{Summary}
+Limited direct execution is like ``baby proofing'' a room - getting rid of anything that might hurt the baby, and to do anything remotely dangerous the baby has to get it through its caretaker.
+
+In my opinions, this analogy isn't that good - we don't want to kill the baby if they step into the neighboring baby's room.

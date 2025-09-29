@@ -1,0 +1,77 @@
+\chapter{Multi-level Feedback}
+
+The \textbf{Multi-level Feedback Queue (MLFQ)} is a scheduling policy that won its creators Corbato et al. the Turing Award. It optimizes turnaround time and response time for interactive processes with realistic assumptions of the kinds of jobs it will receive. Variants of the MLFQ are implemented in modern operating systems.
+
+\section{MLFQ: Basic Rules}
+
+The MLFQ has a number of distinct, disjoint \textbf{queues} (more like lists), each assigned a different \textbf{priority level}. At any given time, the queue with the higher priority level runs its jobs in round-robin.
+
+This can be summarized into two rules:
+
+\begin{itemize}
+    \item \textbf{Rule 1:} If Priority(A) $>$ Priority(B), then A runs and B doesn't.
+    \item \textbf{Rule 2:} If Priority(A) $=$ Priority(B), then A and B run in RR.
+\end{itemize}
+
+The priority level of a process is determined based on how often it blocks, or stops using the CPU. This is because interactive processes are more likely to frequently block than non-interactive processes.
+
+Importantly, the priority of a process constantly updates based on its activity in recent time slices. Otherwise, only processes of the highest priority level would run, and nothing else would.
+
+\section{Attempt \#1: How To Change Priority}
+
+A job's \textbf{allotment} is the amount of time a job can spend at a given priority before the scheduler reduces its priority.
+
+\begin{itemize}
+    \item \textbf{Rule 3:} When a job enters the system, it is placed at the highest priority.
+    \item \textbf{Rule 4:} If a job uses up its allotment while running, its priority is reduced. If a job gives up the CPU before using up its allotment, its priority stays the same.
+\end{itemize}
+
+Examples are long to describe, but this current ruleset properly prioritizes short and interactive jobs, which is good for turnaround time (SJF aspect), as well as response time (RR aspect). 
+
+When a process is added, it is assumed to be short, and as it runs longer, its priority drops. By prioritizing high-blocking processes, a high amount of overlap is achieved as well.
+
+% Some examples of how this policy works in different situations:
+% \begin{itemize}
+%     \item If a single long job that doesn't block is ran, then it drops priority until it is at the lowest level. This is fine, because it probably isn't interactive.
+%     \item If A and B are respectively long and short jobs that don't block, then A drops priority until it reaches the lowest level, and B drops priority but completes before it reaches the lowest level. This is optimized for turnaround time, since the shorter job (B) is being prioritized first.
+%     \item If A is a long job that doesn't block and B is a short job that does block, then B is consistently kept at a high priority level, and A drops priority but still runs when B is blocked. This is optimized for response time, since B, the interactive process, is prioritized.
+% \end{itemize}
+
+This current ruleset has issues: if there are too many interactive jobs, then non-interactive jobs will \textbf{starve}, since they will never receive CPU time. Malicious programs (or a user's own) can be written to keep their priorities high to hog CPU time, and if a program starts as non-blocking but changes, then it has no way to increase its priority.
+
+\section{Attempt \#2: The Priority Boost}
+
+To solve the last problem of process behavior changing over time, we have a new rule:
+
+\begin{itemize}
+    \item \textbf{Rule 5:} Periodically move all jobs in the system to the highest priority.
+\end{itemize}
+
+Now, processes are guaranteed not to starve, and if a process changes behavior to being interactive, it has a chance to stay at a high priority again.
+
+\section{Attempt \#3: Better Accounting}
+
+To solve the issue of gaming the scheduler into letting a process hog CPU time, we rewrite rule 4:
+
+\begin{itemize}
+    \item \textbf{Rule 4:} If a job uses up its allotment at a given level, its priority is dropped.
+\end{itemize}
+
+This might seem like it completely ignores the importance of interactivity, but it doesn't. This is because interactive jobs take up less CPU time and more time blocked, so they lose priority slower than CPU-intensive jobs.
+
+\section{Tuning MLFQ and Other Issues}
+
+To actually implement the MLFQ, a lot more questions need to be answered, such as the number of priority levels, time slice sizes, allotment, period of priority reset, etc.
+
+High priority jobs should have small time slice sizes, since they will overlap a lot. Low priority jobs should have longer time slice sizes, since context switching is expensive.
+
+\section{Summary}
+MLFQ can deliver reasonably both fast turnaround times and fast response times. A base implementation is defined by the following rules:
+
+\begin{itemize}
+    \item \textbf{Rule 1:} If Priority(A) $>$ Priority(B), then A runs and B doesn't.
+    \item \textbf{Rule 2:} If Priority(A) $=$ Priority(B), then A and B run in RR.
+    \item \textbf{Rule 3:} When a job enters the system, it is placed at the highest priority.
+    \item \textbf{Rule 4:} If a job uses up its allotment at a given level, its priority is dropped.
+    \item \textbf{Rule 5:} Periodically move all jobs in the system to the highest priority.
+\end{itemize}

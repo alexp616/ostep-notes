@@ -1,0 +1,41 @@
+\chapter{Address Translation}
+
+Hardware provides \textbf{address translation}, which quickly and efficiently translates virtual addresses into physical addresses.
+
+This is only part of the full implementation the OS uses to abstract and manage memory.
+
+\section{Assumptions}
+
+For now, assume that:
+
+\begin{enumerate}
+    \item Process' address space maps continuously onto physical memory.
+    \item Address space is strictly less than the size of physical memory.
+    \item Every process' address space is the same size.
+\end{enumerate}
+
+\section{An Example \& Dynamic (Hardware-based) Relocation \& Hardware Support: A Summary}
+
+Say a process has an address space that starts at 0 and ends at 16KB. However, in physical memory, it occupies the region 32KB - 48KB.
+
+\textbf{Dynamic relocation}, or \textbf{base and bounds}, stores the start (base) and size (bound) of a process' physical address space somewhere (in registers). The process' virtual address space starts at 0, and translation is just $address_{physical} = address_{virtual} + base$. If the resulting address is between $base$ and $base + bound$, then it is a valid address.
+
+The two registers storing base and bound are referred to as the \textbf{memory manage unit (MMU)}. We will be adding a lot more functionality to this MMU.
+
+A single bit on the CPU indicates whether the CPU is in user mode or kernel mode. The base and bound registers can only be modified with privileged instructions.
+
+The CPU generates \textbf{exceptions} when a process tries to access memory illegally. The user program is paused and the exception handled by the OS' \textbf{exception handler}, likely ending up in the process being killed.
+
+\section{Operating System Issues}
+
+The OS maintains a \textbf{free list} to find room for newly created processes, and to update free space whenever a process is ended.
+
+The base and bounds registers, like other CPU registers, must be saved to the process' PCB when a context switch occurs.
+
+And OS can move around a process' address space when the process is in the ready state if needed. This is done by just changing the base register in the process' PCB.
+
+Exception handlers functions to be called when an exception occurs, and these are initialized at boot.
+
+\section{Summary}
+
+Dynamic relocation as we know it right now sucks - there is a lot of \textbf{fragmentation}, since a process might not actually use all of its address space, leading to wasted memory.

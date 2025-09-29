@@ -1,0 +1,37 @@
+\chapter{Introduction to Paging}
+
+Since splitting memory into variable-sized pieces results in fragmentation, we start to consider splitting memory into fixed-size pieces. This idea is called \textbf{paging}. A process' address space is split into \textbf{pages}, and physical memory is viewed as an array of \textbf{page frames}.
+
+\section{A Simple Example And Overview}
+
+There is an example in the book with figures and explanations.
+
+With paging, a process' address space is split into equally-sized pages. These are called \textbf{virtual} pages, indexed by \textbf{virtual page numbers}. Physical memory is also split into equally-sized pages frames, indexed by \textbf{physical frame numbers}. Any virtual page corresponds to a physical frame, and the mapping is stored in a per-process \textbf{page table}.
+
+Because page sizes are usually powers of 2, the page virtual page number of an address can be determined by looking at the first few bits (assuming virtual addresses start at 0).
+
+\section{Where Are The Page Tables Stored \& What's Actually In The Page Table?}
+
+Assume for now that page tables are stored in the OS' address space (which itself can be virtualized with its own page table).
+
+Also assume that the data structure used is just an array, with index $i$ being virtual page $i$'s corresponding \textbf{page table entry}. This method ends poorly if a lot of pages are needed to cover a virtual address space.
+
+Page table entries should be small, but there are also a few very useful bits used to help achieve an address translator's goals:
+
+\begin{itemize}
+    \item A \textbf{valid bit} that says whether the physical page has actually been allocated. This key detail allows for virtual address spaces bigger than physical memory, since an extremely large virtual address space doesn't have to actually be fully allocated.
+    \item \textbf{Protection bits}, which say whether a page can be read or written to. If a protected page is accessed without permission, a trap is generated to the OS.
+    \item A \textbf{present bit}, which indicates whether a page is in memory or swap space.
+    \item A \textbf{dirty bit}, which indicates whether the page has been modified since it was brought into memory from swap space or a paging file. This is useful if the page needs to be moved back to disk - if the page is clean, then the page on disk doesn't actually have to be modified.
+    \item A \textbf{reference bit}, which tracks whether a page has been accessed, which is useful in determining which pages actually get used.
+\end{itemize}
+
+The \href{https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html}{Intel manuals} contain information about x86 paging support. The referenced document is 5000 pages of Intel's documentation about the x86 instruction set.
+
+\section{Paging: Also Too Slow \& A Memory Trace}
+
+When a process loads from a virtual address, the virtual page number needs to be calculated, the physical location of the page table needs to be fetched, the corresponding page frame needs to be looked up, and the offset needs to be added before we finally get to a physical address. Not to mention the checks to ensure segmentation and protection faults are properly thrown. So, a lot of extra care needs to be put into hardware and software design to optimize this process.
+
+Assuming no cache, each instruction fetch of a program generates a physical memory reference to the page table, then a physical memory reference to find the actual instruction.
+
+When we trace the memory references of a process, we probably learn that some pages are a lot more important than others to be able to access quickly.

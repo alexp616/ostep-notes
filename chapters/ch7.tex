@@ -1,0 +1,69 @@
+\chapter{CPU Scheduling}
+
+This chapter is about various scheduling policies that the OS may use to determine which processes get to run when.
+
+\section{Workload Assumptions \& Scheduling Metrics}
+
+The \textbf{workload} is the set of processes, or \textbf{jobs}, currently running in the system.
+
+To begin, the following assumptions are made. 
+
+\begin{enumerate}
+    \item Each job runs for the same amount of time
+    \item All jobs arrive at once
+    \item Once started, each job runs to completion
+    \item All jobs only use the CPU
+    \item It is know how long each job runs for
+\end{enumerate}
+
+A \textbf{scheduling metric} gives a measurable quantity for a desirability of a given scheduling algorithm.
+
+\textbf{Turnaround time} is one possible scheduling metric, which measures how long passed between a job arrived and was completed. In formal terms, $T_{turnaround} = T_{completion} - T_{arrival}$
+
+Turnaround time is a \textbf{performance} metric.
+
+\textbf{Response time} is another scheduling metric, defined as difference between when the job arrives to the first time it is scheduled. In formal terms, $T_{response} = T_{firstrun} - T_{arrival}$.
+
+Another metric is \textbf{fairness}, which is usually inversely related to performance.
+
+FIFO, SJF, STCF address turnaround time, and Round Robin addresses response time and fairness.
+
+\section{First In, First Out (FIFO)}
+
+The first process that arrives is the first process that gets ran to completion. 
+
+This strategy is optimal with all assumptions in place.
+
+This policy falls apart when assumption 1 is dropped, and the first job queued is very long - this is called the \textbf{convoy effect}.
+
+\section{Shortest Job First (SJF)}
+
+The shortest job is run first, then the next shortest, and so on.
+
+This strategy is optimal with assumptions 2, 3, 4, and 5 in place.
+
+\section{Shortest Time-to-Completion First (STCF)}
+
+The process with the shortest time to completion is always ran first. The OS can have many different times where it decides to switch jobs, whether it be through triggered interrupts from new jobs arriving, or a timer interrupt.
+
+This strategy is optimal with assumptions 3, 4, and 5 in place.
+
+
+
+\section{Round Robin}
+
+Fix some duration $t$. Round robin goes through its list of processes, runs process 1 for $t$, then runs process 2 for $t$, and so on, until it cycles back to process 1.
+
+$t$ is also known as a \textbf{time slice}.
+
+If the time slice is too small, then the total cost of context switches will become more and more expensive.
+
+Round Robin performs extremely well under the response time metric, but extremely poorly under the turnaround time metric. This is an example of fairness being inversely related with performance.
+
+\section{Incorporating I/O}
+
+A scheduler should try to \textbf{overlap} process blockers like I/O as much as possible with other processes - when a process is blocked, the scheduler should try to run another process.
+
+\section{No More Oracle and Summary}
+
+The last assumption, that the scheduler knows how long each job runs for, is the most unrealistic one. SJF and STCF rely on this, so they aren't practical in the real word. The \textbf{multi-level feedback queue}, introduced in the next chapter, uses information from past jobs to try to predict the future.

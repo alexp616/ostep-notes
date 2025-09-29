@@ -1,0 +1,13 @@
+\chapter{Memory API}
+
+Since this chapter is about memory management in C, which I have a lot of experience with already, notes will be very short and sparse.
+
+Remember to allocate an extra byte for strings.
+
+\textbf{Buffer overflows} happen when you write past an allocated buffer. Scarily, these might not cause the program to error if the OS doesn't detect an invalid write - it might've overwritten some of a process' own data.
+
+\code{malloc()} and \code{free()} are library calls, not system calls. The malloc and free libraries manage virtual address space, and are built on system calls themselves. One such system call is \code{brk}, which is used to change the process' \textbf{break}, the location of the end of the heap.
+
+\code{mmap()} creates a memory region associated with swap space.
+
+\code{malloc()} allocates a region of memory, with some metadata containing information about it at the front. The returned pointer points to right after the metadata, where the actual user's data starts. This is why free() doesn't need to take in a byte count, and also why it must be called on the original pointer.

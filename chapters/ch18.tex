@@ -34,4 +34,6 @@ When a process loads from a virtual address, the virtual page number needs to be
 
 Assuming no cache, each instruction fetch of a program generates a physical memory reference to the page table, then a physical memory reference to find the actual instruction.
 
-When we trace the memory references of a process, we probably learn that some pages are a lot more important than others to be able to access quickly.
+When we trace the memory references of a process, we learn that some pages are a lot more frequently accessed and important than others.
+
+\section{Summary}

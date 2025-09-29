@@ -1,1 +1,7 @@
 \chapter{Translation Lookaside Buffers}
+
+A \textbf{translation-lookaside buffer}, or \textbf{address translation cache} is part of a chip's MMU. It is a specialize cache for popular address translations.
+
+\section{TLB Basic Algorithm}
+
+If a virtual page is requested and it exists in the TLB, then the physical address can be returned quickly. This is called a TLB hit. Otherwise (TLB miss), the hardware gets the page table entry from memory, puts the requested virtual page number into the cache, and retries the instruction with the virtual page number already in the TLB.

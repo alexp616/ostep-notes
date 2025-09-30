@@ -2,6 +2,61 @@
 
 A \textbf{translation-lookaside buffer}, or \textbf{address translation cache} is part of a chip's MMU. It is a specialize cache for popular address translations.
 
-\section{TLB Basic Algorithm}
+\section{TLB Basic Algorithm \& Example: Accessing An Array}
 
-If a virtual page is requested and it exists in the TLB, then the physical address can be returned quickly. This is called a TLB hit. Otherwise (TLB miss), the hardware gets the page table entry from memory, puts the requested virtual page number into the cache, and retries the instruction with the virtual page number already in the TLB.
+Each TLB entry consists of a \textbf{virtual page number (VPN)}, the \textbf{physical frame number (PFN)} it maps to, and some special bits. (mentioned later but think important enough to say early)
+
+If a virtual page is requested and it exists in the TLB, then the physical address can be returned quickly. This is called a TLB hit. Otherwise (TLB miss), the (hardware/software) performs the translation using the entire page table, constructs an entry and puts it in the TLB, and retries the instruction with the virtual page number already in the TLB.
+
+When tracing a code's memory accesses, the TLB's behavior is extremely similar to that of a cache's. Instead of checking if an address is in a CPU cache, we're checking if a page is in a CPU cache. Temporal locality still applies. Spacial locality doesn't apply to pages themselves because when a page is put in the TLB, neighboring pages aren't. Spacial locality still applies to invidividual addresses though, since an address and its neighbors are likely in the same page.
+
+\section{Who Handles The TLB Miss?}
+
+In the past, handling TLB misses was the hardware's job, and the hardware had to know exactly where page tables were located in memory via a \textbf{page table base register}. Nowadays, handling TLB misses is the software's job - the hardware just raises an exception, which traps into the OS, since updating the TLB is a privileged operation.
+
+In contrast to a system call, the program counter stays the same after the return-from-trap instruction, since the same instruction needs to be executed again, this time guaranteeing a TLB hit. In a normal system call, the CPU saves the program counter to the next instruction to the kernel stack, which is executed after the syscall.
+
+When handling TLB misses, the OS needs to be careful to not cause an infinite chain of TLB misses. This could happen if a process causes a TLB miss on VPN $i$, the CPU traps into the kernel, the trap handler code is stored in VPN $j$ which isn't in the TLB either, causing the CPU to trap into the kernel to access VPN $j$... Potential solutions to this are to keep trap handler code in a known fixed space in physical memory, or to reserve entries in the TLB for translations.
+
+\section{TLB Contents: What's In There?}
+
+As mentioned before, each TLB entry consists of a VPN, PFN, and other bits. These bits are similar to those found in page table entries, like valid, protection, and dirty bits. Or longer sequences of bytes, like address-space identifiers.
+
+\section{TLB Issue: Context Switches}
+
+The TLB contains virtual-to-physical address translations that are only valid for a currently running process. This creates another thing to worry about when context switching.
+
+One approach is to just empty the TLB on context switches. This can be done quickly by just setting all valid bits to 0.
+
+Another approach is the \textbf{address-space identifier (ASID)} mentioned before - part of the TLB entry determines which process the entry belongs to.
+
+\section{Issue: Replacement Policy}
+
+What cache policy should we use? LRU and random are mentioned but not really discussed.
+
+\section{A Real TLB Entry}
+
+A MIPS R4000 system (from the 1990s) had TLB entries containing:
+
+\begin{itemize}
+    \item A virtual page number
+    \item A physical frame number
+    \item A global bit, used for pages that are public to all processes
+    \item An 8 bit ASID
+    \item 3 coherence bits (not discussed)
+    \item A dirty bit
+    \item A valid bit
+    \item A page mask field, to support multiple page sizes
+\end{itemize}
+
+A MIPS R4000 TLB contained 32 of 64 of these entries. Some of these were reserved by the OS, with a register saying how many.
+
+\section{Summary}
+
+In the common case, there is basically no overhead to memory virtualization, and the rare case of a miss is amortized.
+
+If there isn't enough \textbf{TLB coverage}, then a program's pages can't fit into the cache, leading to performance loss.
+
+\textbf{Database management systems} make good use of support for larger page sizes.
+
+TLB access can slow down physically-indexed cache access, since physical address translation has to be done even before the physically-indexed cache can be accessed.

@@ -19,7 +19,7 @@ Also assume that the data structure used is just an array, with index $i$ being 
 Page table entries should be small, but there are also a few very useful bits used to help achieve an address translator's goals:
 
 \begin{itemize}
-    \item A \textbf{valid bit} that says whether the physical page has actually been allocated. This key detail allows for virtual address spaces bigger than physical memory, since an extremely large virtual address space doesn't have to actually be fully allocated.
+    \item A \textbf{valid bit} that says whether the physical page has actually been allocated. This key detail allows for virtual address spaces bigger than physical memory, since an extremely large virtual address space doesn't have to actually be fully allocated. If a process tries to access an invalid page, an exception is raised.
     \item \textbf{Protection bits}, which say whether a page can be read or written to. If a protected page is accessed without permission, a trap is generated to the OS.
     \item A \textbf{present bit}, which indicates whether a page is in memory or swap space.
     \item A \textbf{dirty bit}, which indicates whether the page has been modified since it was brought into memory from swap space or a paging file. This is useful if the page needs to be moved back to disk - if the page is clean, then the page on disk doesn't actually have to be modified.

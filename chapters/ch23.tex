@@ -1,1 +1,106 @@
 \chapter{Complete VM Systems}
+
+In this chapter, the virutal memory systems of \textbf{VAX/VMS} and Linux are studied. Notes for this chapter are a lot denser, detailed, and branch out a lot more.
+
+\section{VAX/VMS Virtual Memory}
+
+VAX/VMS, or just plain VMS, was the operating system designed for the VAX-11 architecture, introduced in the 1970s. It was run on a wide range of machines, meaning it had to have policies that worked across all kinds of systems.
+
+The VAX-11 had a 32-bit virtual address space, divided into 512-byte pages. The first two bits of the VPN were used to identify the segment a page was a part of.
+
+The second half of each address space was called the ``process space.'' In this process space, the first half (P0) contained code and the heap, and the second half (P1) contained the stack.
+
+The first half of each address space was called ``system space,'' where OS code was. There were many virtual copies, but they all mapped to the same kernel code in physical memory.
+
+Page tables are created for both P0 and P1, and they are made to be dynamically sized, meaning no entries are allocated for the space between the stack and heap. These page tables are also placed in a segment of kernel virtual memory, meaning they themselves can be paged out under pressure.
+
+\subsection{A Real Address Space}
+
+The first page of each address space is marked inaccessible to detect null-pointer accesses.
+
+The kernel virtual address space is a part of each user address space. On context switch, the P0 and P1 segment registers are context switched, but registers for the kernel address spaces weren't changed.
+
+The kernel existing in each address space simplifies many tasks, like dereferencing a pointer a user passes the kernel for something \code{write()} - the kernel can just directly dereference the pointer. This makes kernel developers' jobs easier.
+
+Every process sees the same kernel code and data, including memory and structures the kernel allocates for itself (though they probably get killed if they try to access these)
+
+Since each process has a reference to the kernel, hardware needs to support different protection levels for pages. 
+
+\subsection{Page Replacement}
+
+PTEs in VAX have a valid bit, a protection field, a dirty bit, a field reserved for the OS, and a PFN. There was no reference bit, because VAX developers were concerned about \textbf{memory hogs}, which policies like LRU are susceptible to.
+
+The \textbf{segmented FIFO} replacement policy puts each page of a process into a FIFO queue, and when a page is evicted from this queue, it is put in a global clean-page free list or dirty-page list. If the process faults on a page in a global list, then the page is popped from the global list and reclaimed. If a different process requests a page, then the OS attempts to pop a page from the clean list, then the dirty list.
+
+VMS also batches writing dirty pages to disk, like most other modern systems.
+
+\subsection{Other Neat Tricks}
+
+When a page gets allocated to a process' heap, it needs to be zeroed out for security reasons. However, zeroing a page has overhead, and is useless if a process doesn't actually use that page. So, what VMS does instead is just change the ``reserved for OS'' bits to make the page inaccessible, and when the process actually reads or writes to it, the OS finds a physical page, zeroes it, and adds that PFN to the process' page table. This is called \textbf{demand zeroing}.
+
+When the OS needs to copy a page from one address space to another, it doesn't actually copy it - it just adds a reference to the same physical frame to the second address space's page table. When either process actually writes to the page, a copy of the physical frame is made so that each process actually has its own page. This is called \textbf{copy-on-write}.
+
+Copy-on-write is useful because any shared library can be, well, shared. Copy on write is also critical to UNIX's \code{fork()} and \code{exec()} - instead of copying a process' entire address space, the new process only has references to the same page frames, which are actually copied when needed.
+
+\section{The Linux Virtual Memory System}
+
+This part focuses on Linux for Intel x86.
+
+\subsection{The Linux Address Space}
+
+The Linux virtual address space also contains of a user portion and a kernel portion. When context switching from process A to B, the OS saves all of A's registers into a PCB, loads B's registers from its PCB, and continues running. The \code{CR3} register holds the physical address of the current process' page table.
+
+In 32-bit linux, all addresses above \code{0xC0000000} belong to the kernel.
+
+In the kernel portion of the address space, there are two sections: the \textbf{kernel logical} section, and the \textbf{kernel virtual} section.
+
+Most kernel data structures, like page tables and per-process kernel stacks are located in the kernel logical section, and to expand it, kernel code can call \code{kmalloc}. Kernel logical addresses map continuously onto the first few physical page frames, making it simple to translate between kernel logical addresses and physical addresses, and allowing some I/O to perform \textbf{direct memory access}.
+
+Note - Individual pages can be swapped to disk, but the page tables themselves can't - they always live in kernel logical memory. In fact, no kernel logical memory can be swapped to disk.
+
+Kernel virtual addresses are continuous virtually, but not necessarily continuous physically. Kernel virtual pages are easier to allocate, and are used for large buffers when necessary.
+
+\subsection{Page Table Structure}
+
+x86 provides a hardware-managed, multi-level page table structure. The OS only gets involved in process creation, deletion, and context switches to make sure the correct page table is being pointed to by \code{CR3}.
+
+x86-64 systems currently use a 4-level page table, though this number is expected to grow.
+
+In x86-64, all addresses above \code{0xFFFF800000000000} belong to the kernel, all addresses below \code{0x00007FFFFFFFFFFF} (48-bit addressing) belong to the user space, and everything else causes a seg fault. The first 16 bits must be a sign extension of bit 17 (if bit 17 is 0, then the first 16 bits must all be 0). The next 36 bits are used for page location - the first 9 are used for the index into the top-most layer of the page directory, and so on.
+
+\subsection{Large Page Support}
+
+Intel x86 allows for the use of multiple page sizes, and Linux allows applications to utilize these \textbf{huge pages}. Using larger pages leads to smaller page tables, but more importantly better TLB behavior and other performance gains.
+
+(Look up huge pages for own projects?)
+
+Applications can explicitly request memory allocations with large pages through \code{mmap()} or \code{shmget()}. Recently, Linux developers have also added \textbf{transparent} huge page support, which automatically looks for opportunities to allocate huge pages.
+
+Swapping does not work well with huge pages. Internal fragmentation is also a problem, but IMO it's the process' fault if it allocates a huge page and doesn't use it.
+
+\subsection{The Page Cache}
+
+Linux uses a page cache to try to reduce the number of I/O calls made by common applications. These include \textbf{memory-mapped files}, files fetched using \code{read()} or \code{write()}, and heap and stack memory (called \textbf{anonymous memory} because associated with swap space, not a particular file).
+
+When \code{mmap()} is called on an already open file descriptor, a pointer to the beginning of virtual memory containing the contents of the file is returned. The actual contents are lazy loaded, and when a page fault is triggered, more of the file is loaded in. Every process indirectly uses this, since code is lazy loaded. This can be seen with \code{pmap} on an address.
+
+The page cache tracks if entries are clean or dirty. Dirty data is periodically written back to disk by a set of background threads called \code{pdflush}.
+
+Linux uses a modified form of \textbf{2Q} replacement for its page replacement policy. When a page is accessed for the first time, it is placed into the \textbf{inactive list}, and when it is accessed again, it is placed into the \textbf{active list}. When replacement happens, the LRU entry of the inactive list is evicted. Linux also periodically moves low-priority pages from the active list to the inactive list, keeping the active list to 2/3 the total page cache size. The LRU part of the two lists is approximated.
+
+The 2Q approach is immune to cyclic large-file accesses that LRU performs the worst with.
+
+\subsection{Security And Buffer Overflows \& Meltdown and Spectre}
+
+A \textbf{buffer overflow} attack can be used against recklessly written code. For example, if a function allocates itself a fixed-size buffer on the stack, and takes in a user input, an attacker can input code that overflows the buffer and modifies other parts of the process' address space. It can be used both against a user program and the kernel itself - in the latter case, big problems happen.
+
+To combat this, CPU hardware has started using bits to prevent execution of code from any page with this bit set - making it impossible to directly run injected code from the stack.
+
+A \textbf{return-oriented programming} attack bypasses this, and instead of running code on the stack, modifies the return address of the currently executing function to point to the attacker's own code.
+
+To defend against this, operating systems added \textbf{address space layout randomization}, which randomizes locations of the stack and heap, making it difficult to target a specific function's return address with buffer overflow.
+
+In 2018, two attacks called \textbf{Meltdown} and \textbf{Spectre} were introduced. CPUs utilize \textbf{speculative execution} like branch prediction, which leaves traces of execution in processor caches, branch predictors, etc. These can hold contents of memory.
+
+\section{Summary}
+

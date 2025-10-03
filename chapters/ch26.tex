@@ -1,1 +1,43 @@
 \chapter{Concurrency and Threads}
+
+A \textbf{multi-threaded} program has multiple program counters. Each thread is like a separate process, except they share the same address space.
+
+Each thread has its own private set of registers, so if there are two threads on a single processor, then a context switch with \textbf{thread control blocks} is needed.
+
+If a process has $n$ threads, then it has $n$ distinct stacks, and anything on a thread's stack is called \textbf{thread-local} storage.
+
+\section{Why Use Threads?}
+
+Threads are useful for parallelism on machines with multiple processors. It is also useful for multiprogramming within a program - if one thread is blocked by an I/O request, another thread can still continue running code.
+
+\section{An Example: Thread Creation \& Why It Gets Worse: Shared Data \& The Heart Of The Problem: Uncontrolled Scheduling}
+
+A thread is created with \code{pthread\_create()}, and synchronized with \code{pthread\_join()}.
+
+Thread execution order is nondeterministic, and up to the OS scheduler.
+
+An example of how things could possibly go wrong with two threads incrementing a number in an address in memory:
+
+\begin{enumerate}
+    \item Thread A loads the value at the address into a register
+    \item Thread increments the value in the register
+    \item The OS stops thread A from running, saving its registers
+    \item Thread B loads the value at the address into a register
+    \item Thread B increments the value in the register
+    \item Thread B writes the incremented value back into memory
+    \item Thread A writes its incremented value back into memory
+\end{enumerate}
+
+In this process, the value in memory was effectively only incremented once, since B finished writing back to memory before A could finish. This is called a \textbf{data race}, a type of \textbf{race condition}.
+
+This kind of code is called a \textbf{critical section}, where multiple threads access a shared variable at the same time. What we want is \textbf{mutual exclusion} - if one thread is running the critical section, no other thread should be.
+
+\section{The Wish For Atomicity}
+
+\textbf{Atomic} instructions, or blocks of code, are guaranteed to not be interrupted in the middle of their execution. Only the most important atomic instructions are supported, so we need to use \textbf{synchronization primitives} for our more specialized atomic blocks of code.
+
+\section{One More Problem: Waiting For Another}
+
+Another common theme in concurrent programming is communication between threads. For example, if a thread is waiting for some data in the address space to become available, then it goes to sleep instead of looping endlessly and wasting CPU, and another thread wakes it up when the data is available.
+
+\section{Summary}

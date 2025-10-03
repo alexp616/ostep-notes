@@ -1,1 +1,126 @@
 \chapter{Thread API}
+
+\section{Thread Creation}
+
+\href{https://man7.org/linux/man-pages/man3/pthread_create.3.html}{\code{pthread\_create()} documentation} or \code{man 3 pthread\_create()}
+
+\begin{codeblock}
+#include <pthread.h>
+
+int pthread\_create(pthread\_t *restrict thread,
+                    const pthread\_attr\_t *restrict attr,
+                    typeof(void *(void *)) *start\_routine,
+                    void *restrict arg);
+\end{codeblock}
+
+Arguments:
+
+\begin{itemize}
+    \item \code{thread} is a pointer to a structure used to interact with the thread.
+    \item \code{attr} is a pointer to a structure used to specify any attributes a thread might have, like the stack size or scheduling policy of a thread.
+    \item \code{start\_routine} is a function pointer to what the thread will execute, and 
+    \item \code{arg} is the only argument into \code{start\_routine}. This is commonly packaged into a struct.
+\end{itemize}
+
+Returns 0 if successful, returns error number if error.
+
+\section{Thread Completion}
+
+\href{https://man7.org/linux/man-pages/man3/pthread_join.3.html}{\code{pthread\_join()} documentation} or \code{man 3 pthread\_join()}
+
+\begin{codeblock}
+#include <pthread.h>
+
+int pthread_join(pthread_t thread, void **retval);
+\end{codeblock}
+
+Arguments:
+
+\begin{itemize}
+    \item \code{thread} specifies the thread to wait for.
+    \item \code{retval} is a pointer to the return value expected from the routine ran by the thread.
+\end{itemize}
+
+Be careful about not returning a pointer to something on the thread's stack, though this also applies to any function.
+
+\section{Locks}
+
+\href{https://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html}{\code{pthread\_mutex\_lock} documentation}, or \code{man 3 pthread\_mutex\_lock}
+
+\begin{codeblock}
+#include <pthread.h>
+
+int pthread\_mutex\_lock(pthread\_mutex\_t *mutex);
+int pthread\_mutex\_unlock(pthread\_mutex\_t *mutex);
+\end{codeblock}
+
+A lock can be initialized with \code{pthread\_mutex\_t lock = PTHREAD\_MUTEX\_INITIALIZER}, or \code{pthread\_mutex\_t lock; assert(pthread\_mutex\_init(\&lock, NULL) == 0);}, where \code{NULL} can be replaced by an optional set of attributes.
+
+\code{pthread\_mutex\_destroy()} needs to be called on the lock if allocated with \code{pthread\_mutex\_init()}, otherwise (with macro) not needed.
+
+A thread can claim a lock with \code{pthread\_mutex\_lock()}, and free a lock with \code{pthread\_mutex\_unlock()}. No other thread can claim a lock when another thread has it, and will wait until the lock is free.
+
+Good practice to use wrappers around lock calls, since they can fail silently (return a bad value, but not crash the program).
+
+Two other lock functions:
+
+\begin{codeblock}
+int pthread\_mutex\_trylock(pthread\_mutex\_t *mutex);
+int pthread\_mutex\_timedlock(pthread\_mutex\_t *mutex,
+struct timespec *abs\_timeout);
+\end{codeblock}
+
+\code{pthread\_mutex\_trylock()} returns failure if the lock is already held, and \code{pthread\_mutex\_timedlock()} returns after a timeout or the lock succeeds, whichever happens first.
+
+\code{pthread\_mutex\_timedlock(\&lock, 0)} is equivalent to \code{pthread\_mutex\_trylock(\&lock)}, since if the lock is available, both return as expected, and if the lock isn't then both return an error code.
+
+\section{Condition Variables}
+
+\textbf{Condition variables} are useful when a thread wants to signal something to another.
+
+\href{https://man7.org/linux/man-pages/man3/pthread_cond_wait.3p.html}{\code{pthread\_cond\_timedwait} documentation} or \code{man 3 pthread\_cond\_timedwait}
+
+\begin{codeblock}
+int pthread_cond_wait(pthread_cond_t *cond,
+                      pthread_mutex_t *mutex);
+
+int pthread_cond_signal(pthread_cond_t *cond);
+\end{codeblock}
+
+To use a condition variable, a thread must also have a lock associated with the condition.
+
+\code{pthread\_cond\_wait()} sleeps the calling thread, and waits for some other thread to signal it.
+
+For example, if a thread runs:
+
+\begin{codeblock}
+// in a scope visible to other threads
+// pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+// pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+Pthread_mutex_lock(&lock);
+while (ready == 0)
+Pthread_cond_wait(&cond, &lock);
+Pthread_mutex_unlock(&lock);
+\end{codeblock}
+
+And another thread runs:
+
+\begin{codeblock}
+Pthread_mutex_lock(&lock);
+ready = 1;
+Pthread_cond_signal(&cond);
+Pthread_mutex_unlock(&lock);
+\end{codeblock}
+
+The first thread waits for a signal from the second thread, being the \code{ready} variable.
+
+\code{Pthread\_cond\_wait(\&cond, \&lock);} releases the lock for other threads to acquire it, but reclaims it when the signal is received.
+
+The ``sleeping'' thread checks for the condition in a while loop.
+
+\section{Compiling and Running \& Summary}
+
+Compile with \code{-pthread}, and everything here is in \code{pthread.h}.
+
+\code{man -k pthread} to see entire pthread interface.

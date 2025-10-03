@@ -1,1 +1,39 @@
 \chapter{Advanced Page Tables}
+
+Linear page tables can get really big.
+
+\section{Simple Solution: Bigger Pages}
+
+Bigger pages lead to smaller linear page tables, but also to a lot of wasted space.
+
+Most systems use relatively small page sizes, like x86 uses a 4KB page size.
+
+\section{Hybrid Approach: Paging and Segments}
+
+Instead of having a page table for the entire address space of the process, we can have a page table for each logical segment (remember - stack, heap, code, more). Now, the base register points to the physical address of the page table, and bounds register to the end of the page table.
+
+This brings issues - page tables are no longer fixed sizes, which can lead to fragmentation again, and something like the heap can still grow to be extremely large, making the heap segment's page table still waste a lot of space.
+
+\section{Multi-level Page Tables}
+
+Multi-level page tables work by dividing a page table into page-size units, and if every PTE of a page-size unit is invalid, then the entire page of PTE's is invalid, and that part of the page table is never allocated in the first place. This is called a two-level table, but this can be applied recursively to achieve multi-level tables.
+
+This data structure is called a \textbf{page directory}. It consists of a number of \textbf{page directory entries (PDE)}, which themselves consist of a valid bit and a page frame number.
+
+If a PDE is valid, then at least one PTE in the section of the page table the page frame number points to is valid. Otherwise, the requested VPN isn't valid.
+
+The page directory can also be more flexibly allocated and expanded - it is a tree data structure with pointers to children, meaning it doesn't have to be stored continuously.
+
+The multi-level page table uses less memory, but it also takes more time to access. In the common case, when the page is in the TLB already, performance is identical, but when there is a TLB miss, more memory loads need to be done to do a translation.
+
+In a virtual address, the first $\log_2(\text{\# of pages})$ bits give the VPN, the remaining bits give the offset, and the first $\log_2(\frac{\text{\# of pages}}{\text{\# PTE per page}})$ give the \textbf{page directory index}. The first level of the page directory is an array.
+
+\section{Inverted Page Tables}
+
+An \textbf{inverted page table} is just a hashmap that takes in a virtual page number and a process ID and outputs a physical frame number (and other bits potentially).
+
+\section{Swapping the Page Tables to Disk}
+
+Some systems place page tables in \textbf{kernel virtual memory}, allowing the system to swap these tables to disk.
+
+\section{Summary}

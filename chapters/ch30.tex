@@ -1,1 +1,18 @@
 \chapter{Condition Variables}
+
+A \textbf{join} is when a parent thread wants to check if a child thread has completed before continuing. It can be implemented with a shared variable, but having the parent spin and waste CPU time isn't a good enough implementation.
+
+\section{Definition and Routines}
+
+A \textbf{condition variable} is a queue of threads that are waiting on some condition. When some other thread changes the state of the condition, then it can wake one or more of the waiting threads.
+
+A \code{pthread\_cond\_t} can be statically initialized with \code{pthread\_cond\_t c = PTHREAD\_COND\_INITIALIZER}, and dynamically initialized with \code{pthread\_cond\_init(\&c, NULL)}.
+
+Condition variables have two associated operations: \code{wait()}, which puts a calling thread to sleep, and \code{signal()}, which signals that the condition has changed. In C, they are:
+
+\begin{codeblock}
+pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m);
+pthread_cond_signal(pthread_cond_t *c);
+\end{codeblock}
+
+\code{pthread\_cond\_wait} takes a mutex as a parameter, which it assumes is locked. Since the thread is being put to sleep, \code{pthread\_cond\_wait} frees the lock, and when the thread is woken up again, the lock has to be acquired again before \code{pthread\_cond\_wait} returns.

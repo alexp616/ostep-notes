@@ -1,1 +1,33 @@
 \chapter{Locked Data Structures}
+
+Adding locks is one way to make a data structure \textbf{thread safe}, allowing it can experience the gains of concurrency while still being correct.
+
+Some of these notes will be short because of my background in parallel programming.
+
+\section{Concurrent Counters}
+
+When doing concurrency, \textbf{perfect scaling} is achieved something runs $n$ times faster with $n$ threads.
+
+A counter is a counter, just a variable to increment and decrement. A trivial concurrent approach with two threads one lock is two orders of magnitude slower than just one thread.
+
+An \textbf{approximate counter} is implemented with every thread having a local counter, which gets periodically gets atomically added to the global counter. If the period is short, then there is more overhead but the global counter is more accurate, and if the period is long, then there is less overhead but the global counter is less accurate.
+
+\section{Concurrent Linked Lists}
+
+Concurrently inserting into a linked list is simple. As a challenge, we think about how to make it as performant as possible.
+
+If a thread acquires the lock at the start of an insert instruction and releases it at the end, then a lot of the critical code is actually already thread-safe. For example, \code{malloc()} is thread-safe and time consuming, so it has no reason to be in the critical part of the code. Notably, when using locks, try to make the critical part of the code as short as possible.
+
+\textbf{Hand-over-hand} locking is an idea to add a lock to every node of the list to make it scale better. In practice, there is too much overhead from acquiring and releasing locks for every single node in a traversal.
+
+\section{Concurrent Queues}
+
+One approach to implementing a concurrent queue is to have two separate locks for the head and tail. However, this often does not completely meet the needs of programs, and better implementations are studied in the next chapters.
+
+\section{Concurrent Hash Tables}
+
+The hash table scales very well, because a lock can be created for each bucket, and since a good hashing function is random, this usually allows many concurrent operations to take place at once. Note that the inner list implementation also has to be thread safe.
+
+\section{Summary}
+
+Profile code before optimizing anything - no point optimizing away a performance issue that doesn't exist.

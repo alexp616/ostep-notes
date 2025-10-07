@@ -1,1 +1,69 @@
 \chapter{Swapping: Policies}
+
+\section{Cache Management}
+
+Physical memory is like a cache for pages - we want to minimize the number of page faults, or cache misses.
+
+We want to find a policy that minimizes \textbf{average memory access time (AMAT)} for a program, which is given by: $AMAT = T_M + (P_{MISS} \cdot T_D)$, or just memory access time added to the probability of a page fault times disk access time.
+
+In modern systems, disk access time is so much slower than memory access time that we really need to be careful about the policy we use.
+
+\section{The Optimal Replacement Policy}
+
+The optimal page replacement policy is to greedily replace the page that will be accessed furthest in the future. Sadly, no policy can truly see into the future.
+
+There are three kinds of cache misses:
+
+\begin{itemize}
+    \item Compulsory, which happen at the start of a program because the cache is empty
+    \item Capacity, which happen because the cache is full and it evicts an entry
+    \item Conflict, which happen because of hardware limitations (learn in 142)
+\end{itemize}
+
+\section{A Simple Policy: FIFO \& Random}
+
+These 2 exists and are studied in any cache
+
+\textbf{Belady's Anomaly} refers to edge cases with FIFO where increasing cache size may decrease cache hit rate. For example, the sequence 1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5 has a lower cache miss rate with 3 entries than with 4 entries. A policy like LRU has a \textbf{stack property}, which means a size $N + 1$ LRU cache will always include the contents of a size $N$ LRU cache.
+
+\section{Using History: LRU}
+
+LFU and LRU are also studied in any cache context. MFU and MRU also exist with their own edge cases where they are optimal.
+
+\section{Workload Examples \& Implementing Historical Algorithms}
+
+In a no-locality workload, all cache policies perform the same, since there is no way to predict truly random page access.
+
+In an 80-20 workload, where 80\% of references are made to 20\% of pages and vice versa, LRU performs the best.
+
+Implementing LRU efficiently is complicated, and even efficient implementations have a lot of overhead. So, we turn to approximations for LRU, which is what many modern systems do.
+
+\section{Approximating LRU}
+
+Physical frames are given an extra \textbf{use bit} by hardware, which different policies can use.
+
+The \textbf{clock algorithm} cycles through the list of physical frames. When an unused physical frame is encountered, it is evicted for a new one. When a used physical frame is encountered, its use bit is flipped off, and the algorithm continues. This effectively means that if a page is used every time the algorithm comes to it, then it is a very useful page and it shouldn't be evicted. If there are no unused pages, then all use bits are cleared.
+
+This algorithm approximates LRU pretty well, without needing to search through every single page frame.
+
+\section{Considering Dirty Pages}
+
+If a page has been modified since it was swapped from disk, then it is \textbf{dirty}. Dirty pages are more expensive to swap back to disk than clean pages, which already have an exactly copy of themselves on disk and don't need a write.
+
+\section{Other VM Policies}
+
+There are also \textbf{page selection} policies, which determine when to bring a page into memory. For example, an OS can try to predict when a process is going to access a page, \textbf{prefetching} the page from disk and reducing latency for the process.
+
+Clustering and grouping of disk writes was in the last chapter.
+
+\section{Thrashing}
+
+When the memory demands of running processes exceeds the available physical memory, the system will need to frequently move pages from RAM and disk, severely slowing everything down. This is known as \textbf{thrashing}.
+
+Some current systems run an \textbf{out-of-memory killer} that choose a memory-intensive process and kill it to free memory.
+
+\section{Summary}
+
+(Look up \textbf{scan resistance}, which is a tweak to clock)
+
+Before the rise of SSDs, page replacement algorithms were falling off, but have recently been becoming more important.

@@ -1,1 +1,55 @@
 \chapter{Hard Disk Drives}
+
+\textbf{Hard disk drives} have been the main form of persistent data storage for decades, and file system softwares were built with specifically them in mind.
+
+\section{The Interface}
+
+HDDs are made up of $n$ sectors of 512 bytes each, numbered $0$ to $n-1$. The address space of the drive is viewed as such: $[0, n-1]$.
+
+File systems usually write more than 512 bytes at a time, but only 512-byte writes are atomic. When a write is interrupted before it is finished, it called a \textbf{torn write}.
+
+\section{Basic Geometry}
+
+HDDs consist of one or more \textbf{platters}, the circular ``disk'' that is written to by inducing magnetic charges on it. They spin around the \textbf{spindle}, which is connected to a motor. There are usually multiple \textbf{tracks}, which are concentric rings of different radii on the same platter. A \textbf{disk head} is responsible for reading and writing information, and is assisted by the \textbf{disk arm} which moves the disk head over the correct track.
+
+\section{A Simple Disk Drive}
+
+Moving to a requested address involves spinning the platter, and moving the disk arm.
+
+The time it takes to rotate the platter is called \textbf{rotational delay}. Since hard disk drives only spin in one direction, the worst-case rotational delay for an access is a full rotation.
+
+If there are multiple tracks (which there probably are), moving the disk arm to the right track is called a \textbf{seek}. Since the resulting movement has to be so precise, seeking is also very costly.
+
+\textbf{Track skew} is just a way sequential sectors are placed to make sequential accesses across tracks smoother.
+
+\textbf{Multi-zoned} disk drives have more sectors in outer tracks, with each region of track having the same density of sectors.
+
+Modern HDDs also have a \textbf{cache}, also known as a \textbf{track buffer}. It works exactly the same as a CPU cache - it utilizes spacial locality to return results quickly in the common case. If the OS writes to some sector, then writes to the next sector, the HDD can just pull the data from its cache. If the OS reads some sector, then reads the next sector later, the HDD can also just return the data from its cache.
+
+With this cache, HDDs can handle writes in two different ways. The \textbf{write back} caching approach has the HDD announce that it is finished when the data is in its cache, and the \textbf{write through} caching approach only returns when data has actually been written to disk. Write back is faster, but also more error-prone.
+
+\section{I/O Time: Doing The Math}
+
+Time taken to access a disk can be calculated as:
+
+$$T_{I/O} = T_{seek} + T_{rotation} + T_{transfer}$$.
+
+Note that it is worth using various workloads to compare HDDs, like random workloads and sequential workloads. Additionally, different HDDs can be specialized in different things, like performance over capacity or vice versa.
+
+\section{Disk Scheduling}
+
+With how time consuming I/O is with HDDs, the OS's \textbf{disk scheduler} decides the order of requests to write to the HDD. Importantly, the disk scheduler can get a pretty good estimate of how long a request will take to fulfill.
+
+\textbf{Shortest Seek Time First} can lead to starvation, if there are a bunch of requests to the same track, never letting the arm service a different track.
+
+\textbf{SCAN}, or the \textbf{elevator} algorithm, has the disk arm move in sweeps from the outside of the disk to in. This solves the starvation issue, but doesn't implement SJF, which is optimal for turnaround time.
+
+\textbf{Shortest Positioning Time First} is kind of a hand-wavey solution, but seek time and rotational times are different across HDDs, so HDDs ended up implementing this scheduling algorithm themselves.
+
+Nowadays, OS schedulers are a lot more approximate - they just pick a large batch of the best requests and send them to the disk's own scheduler.
+
+\textbf{I/O merging} is an important idea - if a request to access sectors 33, 8, and 34, then the scheduler should perform the 33, 34, and 8 reads in that order.
+
+Because of how slow I/O is, research results show that sometimes the OS shouldn't immediately send out every I/O request it has, but to wait in case a better-coalesced request can be made.
+
+\section{Summary}

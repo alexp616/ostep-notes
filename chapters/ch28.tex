@@ -1,1 +1,102 @@
 \chapter{Locks}
+
+\section{Locks: The Basic Idea \& Pthread Locks}
+
+Locks are either \textbf{free} or \textbf{held}. When a thread tries to call \code{lock()} on a free lock, it instantly acquires the lock and continues running the code, and if the lock isn't free, it waits until the lock is free before acquiring the lock and continuing with code. A lock can be \code{unlock()}ed by a thread.
+
+Threads, like processes, are also scheduled by the OS.
+
+A lock in POSIX is called a \textbf{mutex} because it provides mutual exclusion between threads. Locks are declared as variables, allowing multiple locks to exist.
+
+\section{Building A Lock \& Evaluating Locks}
+
+The OS gets some hardware primitives to help implement locks.
+
+An implementation of a lock is graded on three factors: whether it works, fairness, and performance. Fairness measures how equal each contending thread's chances of acquiring a free lock are. A low fairness factor can imply thread starvation. Performance measures the time overhead of using locks. Important cases are when there is only one thread, when there are multiple threads on a single processor, and when there are multiple threads on multiple cores.
+
+Following are multiple implementations of locks.
+
+\section{Controlling Interrupts}
+
+If on a single-core system running multiple threads, lock can be implemented by just disabling interrupts inside of a block of code. Then, the scheduler can't stop the thread to run other threads.
+
+There are a few downsides:
+
+\begin{itemize}
+    \item Disabling interrupts is a privileged operation, meaning malicious code can just permanently stop anything from interrupting it.
+    \item This doesn't work on multiprocessors, since other threads will run even if interrupts are disabled.
+    \item Turning off interrupts for too long can lead to interrupts being lost.
+\end{itemize}
+
+This implementation is only really viable for within kernel use, since it can be trusted to avoid all of these.
+
+\section{A Failed Attempt: Just Using Loads/Stores}
+
+Another idea is to just have a global flag - when a thread calls \code{lock()} and the flag is 0 (free), then the thread sets the flag to 1 and continues - otherwise the thread \textbf{spin-waits} in a while loop until the flag is free again. A flag is freed by calling \code{unlock()} and setting the flag to 0. This approach is called a \textbf{spin-lock}.
+
+This approach also doesn't work - if thread A calls \code{lock()}, sees that the flag is free, and while issuing a write to memory, another thread B calls \code{lock()} as well, sees that the flag is free before A can finish claiming the lock.
+
+It also isn't performant - a lot of CPU cycles are wasted on spin-waiting.
+
+\section{Building Working Spin Locks with Test-And-Set \& Evaluating Spin Locks}
+
+* Genuinely don't understand how Peterson's algorithm works
+
+The \textbf{test-and-set} operation takes a pointer and a value, and atomically fetches the old value at the pointer, sets it to the new value, and returns the old value.
+
+This operation is guaranteed to be atomic by hardware, using some mechanism like cache coherence protocols or bus locking.
+
+This instruction allows the spin-lock approach to work, since previously, it was possible for one thread to read the flag while another thread was writing to it, but now it isn't because the operation is atomic.
+
+This implementation of the spin lock is correct, but doesn't guarantee no starvation.
+
+\section{Compare-And-Swap}
+
+The \textbf{compare-and-swap} operation takes a pointer, an expected value, and a new value. If the value of the pointer is the expected value, then test-and-set is run, setting the value of the pointer to the new value and returning the old one.
+
+This is a more powerful version of test-and-set, meaning it can implement the spin-lock, as well as \textbf{lock-free synchronization} later.
+
+\section{Load-Linked and Store-Conditional}
+
+\textbf{Load-linked} and \textbf{store-conditional} are instructions used together to build locks.
+
+Load-linked acts exactly like a normal load instruction, but also annotates the address it loads from. Store-conditional takes an address and a value, and if the value of the address hasn't been modified since the last load-linked, it updates the value. Otherwise, return false.
+
+To acquire a lock, a thread spin-waits with a condition of \code{LoadLinked()} on a flag until it is free. Then, if \code{StoreConditional()} is successful, then the thread has the lock. Otherwise, it keeps spinning because another thread's store-conditional has already modified the value.
+
+\section{Fetch-And-Add}
+
+\textbf{Fetch-And-Add} is an instruction that takes in a pointer and atomically increments its value. This can implement locks by having a global turn number, and when a thread wants a turn, it atomically increments the global turn number for its turn. When the turn number is equal to the thread's turn, then it runs.
+
+This approach is guaranteed to be fair.
+
+\section{Too Much Spinning: What Now?}
+
+On single-core CPUs, threads without the lock will just spin for their entire time slices, wasting CPU time. On multi-core CPUs, as long as the critical section is short, there is not much overhead.
+
+\section{A Simple Approach: Just Yield, Baby}
+
+In single-threaded systems, the main thing we have to worry about is if a thread gets interrupted while in the critical section, forcing all of the other threads to wait until it is un-interrupted.
+
+Instead of just spin-waiting, threads waiting for locks can try to call a \code{yield()} primitive provided by the OS, giving up the CPU. This solves the wasted cpu cycles problem, but context switches are still expensive. Additionally, a thread can still be starved.
+
+\section{Using Queues: Sleeping Instead Of Spinning}
+
+If a thread requests a lock that isn't available, it can be added to a queue, then slept. When a thread unlocks the lock, it removes the next thread in the queue and wakes it up. The only time spin-waiting will happen now is if a thread gets interrupted while it is acquiring a lock.
+
+\section{Different OS, Different Support}
+
+Linux's \textbf{futex} is a system call used for kernel-independent synchronization. Here is the \href{https://man7.org/linux/man-pages/man2/futex.2.html}{documentation}. The higher-level mutex functions are implemented using futexes. It provides two functions:
+
+\begin{itemize}
+    \item \code{futex\_wait(address, expected)}, which sleeps the calling thread until address is not equal to expected.
+    \item \code{futex\_wake(address)} wakes one (some specified number) thread in the \code{FUTEX\_WAIT} queue corresponding to the address.
+\end{itemize}
+
+\section{Two-Phase Locks}
+
+Linux's futex is an example of a two-phase lock, where after calling for a lock, a thread spins for a bit in case it gets it quickly (phase 1), then goes to sleep (phase 2).
+
+\section{Summary}
+
+Locks today are built with some specialized hardware primitives, and low-level system calls provided by the OS, like Linux's futex.

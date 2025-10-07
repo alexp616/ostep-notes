@@ -1,1 +1,51 @@
 \chapter{Redundant Disk Arrays (RAID)}
+
+\textbf{Redundant Array of Inexpensive Disks}, or \textbf{RAID}, is a technique used to build faster, bigger, and more reliable disk storage. Importantly, all of these changes are \textbf{transparent}, meaning the host system can treat a \textbf{RAID} as a normal disk.
+
+\section{Interface And RAID Internals \& How To Evaluate A RAID}
+
+File systems issue \textbf{logical I/O} requests to RAIDs, and internally RAIDs issue \textbf{physical I/O} to disks. They are connected just like normal disks with SCSI or SATA.
+
+RAIDs are like a specialized computer for managing I/O to multiple disks - they have their own processor, memory, and disks.
+
+RAIDs are evaluated on capacity, performance, and reliability (just like any other storage device?)
+
+\section{RAID Level 0: Striping}
+
+RAIDs present themselves as a normal disk with indexable blocks. To utilize parallelism in writes, adjacent blocks are put on different disks, so that one write of $n$ adjacent blocks can be handled by $n$ disks at once. This technique is called \textbf{striping}, specifically with a chunk size of 1.
+
+The chunk size of a striping approach dictates how many adjacent virtual blocks are put on the same disk until they get mapped to the next disk.
+
+RAID level 0 isn't actually a RAID level because there is no redundancy - it is just the sectors of a set of disks ordered into an array. Thus, it has excellent performance and capacity, but not reliability, since if one disk gets corrupted, the data is gone forever.
+
+\section{RAID Level 1: Mirroring}
+
+RAID level 1 just means that for every block, there is a copy of it on some other disk in the system. When reading, the RAID can choose the more performant copy to read from, and when writing, the RAID must write to both.
+
+A \textbf{write-ahead log}, stored in battery-backed RAM, always keeps track of what the RAID is about to do. Thus, even if the RAID crashes or power goes out, a \textbf{recovery} procedure can be ran with the log that performs the same requested writes.
+
+RAID Level 1 has good performance and reliability, but suffers in the capacity department.
+
+\section{RAID Level 4: Saving Space With Parity}
+
+The \textbf{parity} method has one disk $P$ dedicated to storing the xor of the other disks, so when some disk fails, its data can be recovered from taking the xor-sum of all of the other disks.
+
+Sequential writes can be implemented efficiently because of a technique called \textbf{full-stripe write}, which allows for full parallelism.
+
+Random small writes can be optimized with parallelism across disks, but the last disk which holds the parity of all of the other disks cannot be parallelized - making all of the parallelism gains for naught.
+
+RAID Level 4 has good capacity and reliability, but suffers from the performance department, especially in the case of random small writes.
+
+\section{RAID Level 5: Rotating Parity}
+
+Level 5 works the exact same as level 4, except the parity block is rotated across disks, instead of all being on one disk. This solves the random small write problem, since changing the parity of multiple distinct stripes can be parallelized.
+
+\section{RAID Comparison: A Summary \& Other Interesting RAID Issues}
+
+RAID-5 provides decent capacity, reliability, and performance. RAID-0 is unmatched in capacity and performance, and RAID-1 is the most reliable, at the cost of capacity. 
+
+There are many other uncovered RAID designs, as well as errors such as \textbf{latent sector errors} or \textbf{block corruption} that require different approaches to handle.
+
+\section{Summary}
+
+Different systems will find different levels useful.

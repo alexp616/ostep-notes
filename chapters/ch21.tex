@@ -1,1 +1,48 @@
 \chapter{Swapping: Mechanisms}
+
+We want to support address spaces larger than what can fit in memory, so that a program doesn't have to worry about if there is enough room in memory to sustain it.
+
+The answer to this is swap space, which swaps memory between RAM and disk, preferably the less frequently used memory.
+
+\section{Swap Space}
+
+The size of the swap space and RAM determines the maximum number of pages that a system can use, 
+
+Swap space is not the only location a process may frequently swap pages between - at process start, it loads code from disk, and code pages can be freed to make space for other pages since they can be found on disk anyways.
+
+\section{The Present Bit \& The Page Fault}
+
+When a TLB miss occurs, the kernel may find that the corresponding PTE states that the page is not present in physical memory - its present bit is 0. This is called a \textbf{page} fault, generating a trap, blocking the process, and causing the OS to jump to the \textbf{page-fault} handler.
+
+The PTE holds data to help find the disk address of a PFN. The page is fetched from disk, the OS updates the present bit and the PFN of the PTE, and retries the instruction. This process is called a \textbf{page in}. 
+
+Page ins can cause a TLB miss, and that process is described earlier.
+
+\section{What If Memory Is Full?}
+
+If physical memory is full on a page in, then the OS needs to \textbf{page out} one or more pages to make room for the incoming page. How it decides which pages to page out is known as the \textbf{page-replacement policy}. (next chapter)
+
+\section{Page Fault Control Flow}
+
+This is almost all of the steps taken when a process tries to read memory:
+
+\begin{enumerate}
+    \item Process loads memory at virtual address $i$.
+    \item VPN is computed using leading bits.
+    \item Check if the TLB has the corresponding PFN. If it does, jump to step 9.
+    \item If the TLB doesn't have the translation, then search the process' page table. This search is described in the chapter about page directories.
+    \item If the PTE says that the page is present and valid, then jump to step 9 with the PFN.
+    \item If the page is invalid, have the OS deal with the process.
+    \item If the page is valid and not present, then load the frame from disk into a physical frame if there are free physical frames.
+    \item If there aren't free physical frames, then find a physical frame to evict with a page-replacement policy. Swap the page on the disk and the evicted page. Jump to step 3.
+    \item Compute the physical address, access the memory, and return it to the process.
+\end{enumerate}
+
+\section{When Replacements Really Occur}
+
+There should always be a small amount of memory free, so most operating systems have two values: a \textbf{high watermark} (HW) and a \textbf{low watermark} (LW). When there are less than LW pages available, a background thread called the \textbf{swap daemon} or \textbf{page daemon} evicts pages to swap space until there are HW pages available.
+
+This allows pages to be swapped in clusters, increasing efficiency of disk I/O.
+
+\section{Summary}
+

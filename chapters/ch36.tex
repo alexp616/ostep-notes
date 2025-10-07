@@ -1,1 +1,51 @@
 \chapter{I/O Devices}
+
+\section{System Architecture}
+
+There is a hierarchy of \textbf{I/O Buses}, since making performant I/O buses is costly, and they slow down as the distance between devices becomes larger. So, the most important (low latency needed) I/O devices are placed closer to the CPU, and the less important I/O devices can be placed further. Similar to the memory hierarchy, the I/O hierarchy also has more space for devices as I/O gets slower.
+
+In a real architecture, the CPU might have direct, high-performance connections to the graphics card and memory, as well as an I/O chip via a \textbf{direct media interface (DMI)}. This I/O chip handles the rest of the I/O, like SSDs through PCIe, peripherals through USB, or hard disks through eSATAs, etc.
+
+\section{A Canonical Device \& The Canonical Protocol}
+
+When looking at a device, we need to consider its hardware \textbf{interface} to the rest of the system, and its \textbf{internal structure}, how it implements that interface.
+
+A device interface usually implements some kind of \textbf{status} check, a \textbf{command} receiver, and a \textbf{data} stream.
+
+When the OS waits for the device to be ready, it repeatedly runs the status check - this is called \textbf{polling}. When the CPU is involved in moving data, it is called \textbf{programmed I/O (PIO)}.
+
+\section{Lowering CPU Overhead With Interrupts}
+
+Instead of polling, the device can raise an interrupt when it is done, saving CPU cycles and removing the need for polling.
+
+If a very fast device throws an interrupt each time it finishes, then this can slow down the CPU significantly - polling may be better than an interrupt in this situation. If the speed is unknown, then a hybrid approach can be taken, where the CPU polls for a bit, then the device switches to throw interruption mode. This is called a \textbf{two-phased} approach.
+
+If a device generates too many interrupts, it can cause the OS to enter \textbf{livelock}, where it spends all of its time processing interrupts.
+
+A device can \textbf{coalesce} its interrupts - combining multiple requests into one to reduce the frequency of interrupts, though this will increase the latency of a request.
+
+\section{More Efficient Data Movement With DMA}
+
+If a CPU was forced to perform all I/O to disks, then that would be a lot of wasted cycles on some trivial operations. A \textbf{direct memory access (DMA)} engine is a device that can help facilitate these transfers without CPU intervention.
+
+\section{Methods Of Device Interaction}
+
+One approach is to have explicit \textbf{I/O instructions}, like \code{in} and \code{out} on x86.
+
+Another approach is called \textbf{memory-mapped I/O}, which virtualizes device registers, which lets the OS load and write to the device.
+
+Both are in use today.
+
+\section{Fitting Into The OS: The Device Driver \& Case Study: A Simple IDE Disk Driver}
+
+\textbf{Device drivers} abstract device interactions for the OS. This allows something like a file system to ignore exactly what type of disk it's working with, since it can just use the device drivers' API. Device drivers usually also provide lower-level API's for applications that need them.
+
+A downside of all of this abstraction is it makes it harder for specific features of different devices to be useful - for example a device that has very rich error reporting needs its own device driver written for it.
+
+Over 70\% of OS code is dedicated to device drivers, and are a primary contributor to kernel bugs.
+
+\section{Case Study: A Simple IDE Disk Driver}
+
+This section gives an example of a protocol for a device and how to implement it, hard to explain without just repeating the exact example.
+
+\section{Historical Notes \& Summary}

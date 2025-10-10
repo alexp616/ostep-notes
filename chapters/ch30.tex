@@ -8,7 +8,7 @@ A \textbf{condition variable} is a queue of threads that are waiting on some con
 
 A \code{pthread\_cond\_t} can be statically initialized with \code{pthread\_cond\_t c = PTHREAD\_COND\_INITIALIZER}, and dynamically initialized with \code{pthread\_cond\_init(\&c, NULL)}.
 
-Condition variables have two associated operations: \code{wait()}, which puts a calling thread to sleep, and \code{signal()}, which signals that the condition has changed. In C, they are:
+Condition variables have two associated operations: \code{wait(c)}, which puts a calling thread to sleep, and \code{signal(c)}, which signals that the condition has changed. In C, they are:
 
 \begin{codeblock}
 pthread_cond_wait(pthread_cond_t *c, pthread_mutex_t *m);
@@ -16,3 +16,28 @@ pthread_cond_signal(pthread_cond_t *c);
 \end{codeblock}
 
 \code{pthread\_cond\_wait} takes a mutex as a parameter, which it assumes is locked. Since the thread is being put to sleep, \code{pthread\_cond\_wait} frees the lock, and when the thread is woken up again, the lock has to be acquired again before \code{pthread\_cond\_wait} returns.
+
+As a general rule of thumb, a thread should always hold the lock when calling signal. The textbook presents a thread join operation, with multiple variations that fail for different reasons.
+
+\section{The Producer/Consumer (Bounded Buffer) Problem}
+
+The premise of the producer/consumer problem is that there are producer and consumer threads - producer threads put data in a buffer, and consumer threads take the data. Web servers are an example of this - producer threads put HTTP requests in a buffer, and consumer threads handle them. Because the buffer is a shared data structure, its correctness and performance becomes a concurrency problem.
+
+If a lock is used, CPU time is wasted on spin-waiting, so we use condition variables instead.
+
+\textbf{Mesa semantics} state that when a thread is woken by a signal, it is put on the ready queue. Importantly, it doesn't immediately run, meaning another thread can modify the data it woke up to see. \textbf{Hoare semantics} are harder to build, but provide a stronger guarantee that threads will run immediately after being signaled.
+
+An example of Mesa semantics in action is: say a consumer thread $c_1$ runs, sleeping itself on a condition $C$. Then, a producer $p_1$ runs, signaling the condition $C$ and waking $c_1$. Then, another consumer $c_2$ runs, sees that the condition $C$ is satisfied, and handles the data in the buffer. Then $c_1$ runs, and sees nothing is in the buffer.
+
+The fix to this is to use a while loop instead of an if statement - if a thread is woken and sees that the data isn't actually there, it just goes back to sleep.
+
+Be careful about using only one condition variable for multiple threads - a consumer thread might wake up another consumer thread, which would see that there is no data, making it go back to sleep, and since it signaled the consumer thread and not the producer thread, all threads end up going to sleep.
+
+The solution to the single buffer producer/consumer problem is to use two signals, to signal a producer to wake up or a consumer to wake up.
+
+\section{Covering Conditions}
+
+Assume a group of threads need to share some amount of memory. $T_1$ needs 100 bytes, $T_2$ needs 10 bytes, and there are no free bytes. $T_3$ signals that it has just freed 50 bytes, but since threads wait on a condition in a queue, it tries to wake $T_1$, which goes back to sleep because 50 bytes isn't enough. This is solved with a \textbf{covering condition}, which sends a signal to every thread waiting on a condition.
+
+\section{Summary}
+

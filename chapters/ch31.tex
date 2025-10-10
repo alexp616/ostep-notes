@@ -1,1 +1,26 @@
 \chapter{Semaphores}
+
+\section{Semaphores: A Definition}
+
+Semaphores are objects with an integer value that are manipulated with \code{wait()} and \code{post()}. \code{wait()} decrements the semaphore and waits if it is negative, and \code{post()} increments the semaphore and wakes a thread if it is non-negative.
+
+In C, they can be initialized with \code{sem\_t s; sem\_init(\&s, 0, 1)}. \code{1} is the value the semaphore is initialized to, and \code{0} indicates that it is shared between all threads of a process.
+
+\section{Binary Semaphores (Locks)}
+
+A semaphore used the same way as a lock is called a \textbf{binary semaphore}.
+
+Say there are three threads, $T_1, T_2, T_3$, and a semaphore $S$ is initialized to 1. $T_1$ runs first, decrementing $S$ to 0 and getting interrupted in its critical section. Then, $T_2$ runs, decrementing $S$ to $-1$ and sleeping. Then, $T_3$ runs, decrementing $S$ to $-2$ and sleeping. Then, $T_1$ finishes its critical section, incrementing the semaphore to $-1$?????
+
+\section{Semaphores For Ordering}
+
+Semaphores can also be used as a \textbf{ordering} primitive.
+
+Say there is a parent thread and a child thread $P$ and $T$, and a semaphore $S$ is initialized to 0. Assume $P$ creates $T$, and then gets interrupted for $T$. $T$ runs, calls \code{post()} to signal its finish, incrementing the semaphore to $1$ and returning. Then $P$ runs later, which is desired behavior. Now assume $P$ creates $T$, then runs \code{wait()}, decrementing $S$ to $-1$ and sleeping. Then, $T$ runs, incrementing $S$ to $0$, waking $P$, which is also desired behavior.
+
+How to implement one parent thread and two child threads? Multiple semaphores?
+
+The general rule for setting a semaphore is to set it to the number of resources you can give away after immediately after initialization. So, with a lock, you can give away 1 thing immediately (the lock). With the condition variable, you can't give anything away, since the child has to be created first.
+
+\section{Bounded Buffer Problem}
+

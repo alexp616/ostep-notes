@@ -2,7 +2,9 @@
 
 \section{Semaphores: A Definition}
 
-Semaphores are objects with an integer value that are manipulated with \code{wait()} and \code{post()}. \code{wait()} decrements the semaphore and waits if it is negative, and \code{post()} increments the semaphore and wakes a thread if it is non-negative.
+Semaphores are objects with an integer value that are manipulated with \code{wait()} and \code{post()}. \code{wait()} decrements the semaphore then waits if it is negative, and \code{post()} increments the semaphore then wakes a thread if the semaphore is negative.
+
+If a semaphore is negative, its absolute value will always represent the number of waiting threads.
 
 In C, they can be initialized with \code{sem\_t s; sem\_init(\&s, 0, 1)}. \code{1} is the value the semaphore is initialized to, and \code{0} indicates that it is shared between all threads of a process.
 
@@ -10,17 +12,43 @@ In C, they can be initialized with \code{sem\_t s; sem\_init(\&s, 0, 1)}. \code{
 
 A semaphore used the same way as a lock is called a \textbf{binary semaphore}.
 
-Say there are three threads, $T_1, T_2, T_3$, and a semaphore $S$ is initialized to 1. $T_1$ runs first, decrementing $S$ to 0 and getting interrupted in its critical section. Then, $T_2$ runs, decrementing $S$ to $-1$ and sleeping. Then, $T_3$ runs, decrementing $S$ to $-2$ and sleeping. Then, $T_1$ finishes its critical section, incrementing the semaphore to $-1$?????
+Say there are three threads, $T_1, T_2, T_3$, and a semaphore $S$ is initialized to $1$. $T_1$ runs first, decrementing $S$ to $0$ and getting interrupted in its critical section. Then, $T_2$ runs, decrementing $S$ to $-1$ and sleeping. Then, $T_3$ runs, decrementing $S$ to $-2$ and sleeping. Then, $T_1$ finishes its critical section, incrementing the semaphore to $-1$, and waking thread $T_2$. $T_2$ finishes its critical section, incrementing the semaphore to $0$, and waking $T_3$. $T_3$ finishes its critical section, incrementing the semaphore to $1$, and everything is back to normal.
 
 \section{Semaphores For Ordering}
 
 Semaphores can also be used as a \textbf{ordering} primitive.
 
-Say there is a parent thread and a child thread $P$ and $T$, and a semaphore $S$ is initialized to 0. Assume $P$ creates $T$, and then gets interrupted for $T$. $T$ runs, calls \code{post()} to signal its finish, incrementing the semaphore to $1$ and returning. Then $P$ runs later, which is desired behavior. Now assume $P$ creates $T$, then runs \code{wait()}, decrementing $S$ to $-1$ and sleeping. Then, $T$ runs, incrementing $S$ to $0$, waking $P$, which is also desired behavior.
-
-How to implement one parent thread and two child threads? Multiple semaphores?
+Say there is a parent thread and a child thread $P$ and $T$, and a semaphore $S$ is initialized to 0. Assume $P$ creates $T$, and then gets interrupted for $T$. $T$ runs, calls \code{post()} to signal its finish, incrementing the semaphore to $1$ and returning. Then $P$ runs later, which is desired behavior. Now assume $P$ creates $T$, then runs \code{wait()}, decrementing $S$ to $-1$ and sleeping. Then, $T$ runs, incrementing $S$ to $0$ and wakes $P$, which is also desired behavior.
 
 The general rule for setting a semaphore is to set it to the number of resources you can give away after immediately after initialization. So, with a lock, you can give away 1 thing immediately (the lock). With the condition variable, you can't give anything away, since the child has to be created first.
 
 \section{Bounded Buffer Problem}
+
+If there is only one producer and one consumer, then a semaphore \code{empty} initialized to the size of the buffer and a semaphore \code{full} initialized to 0 will solve the bounded buffer problem. When a producer thread wants to put something in the buffer, it calls \code{wait(empty)} to wait for memory to be  available, then \code{post(full)} to wake a consumer thread. When a consumer thread wants to take something from the buffer, it calls \code{wait(full)} to wait for something to show up in memory, then \code{post(empty)} to wake a producer thread.
+
+This suffers from a race condition in between the wait and posts, since a thread may get interrupted while it is updating the current index of the buffer. To solve this, add a mutex semaphore inside each of the \code{wait} $\dots$ \code{post} blocks - if the mutex wraps the boxes, then deadlock occurs.
+
+\section{Reader-Writer Locks}
+
+\textbf{Reader-writer locks} show up when multiple threads want to read and write to a data structure. A special lock has to made because as long as no write is happening, a read can happen, but in order to write, no reads or writes can be happening.
+
+The write lock is simple to implement for writers, since it's just a simple \code{wait} and \code{post} call. When the first reader wants to acquire a read lock, it also needs to acquire the write lock to make sure no writes are happening, and when the last reader wants to acquire a read lock, it needs to release the write lock to let writes happen again.
+
+\section{The Dining Philosophers}
+
+The premise of the \textbf{dining philosopher's problem} is that $n$ philosophers (usually 5) are sitting around a table, with forks between them. In order to eat, a philosopher needs the fork to the left and the fork to the right of them. The goal is for there to be no deadlock, for no philosopher to starve, and for concurrency to be high.
+
+If we just use 5 mutexes, then deadlock could occur if each philosopher grabs the fork on their left.
+
+Dijkstra's solution was to select one philosopher and force them to grab forks in a different order from all of the other philosophers.
+
+\section{Thread Throttling}
+
+\textbf{Thread throttling} can happen if there are too many threads demanding too many resources at the same time, such as memory. A semaphore can be wrapped around a memory-intensive area of code to make sure not too many threads use a lot of memory at once.
+
+\section{How To Implement Semaphores}
+
+Semaphores can be implemented using a condition variable and a lock. \code{wait()} is implemented with locking the semaphore itself, calling \code{cond\_wait()} on the semaphore's condition and the lock if the semaphore is less than or equal to 0, decrementing the semaphore, and unlocking it. (decrement is put after the check because if put before, can lead to race condition) \code{post()} is implemented by just locking the semaphore, incrementing its value, signaling the semaphore's condition, and unlocking the semaphore.
+
+\section{Summary}
 

@@ -1,1 +1,47 @@
 \chapter{Concurrency Bugs}
+
+\section{What Types Of Bugs Exist?}
+
+Roughly 30\% of concurrency bugs found in a study on modern applications were deadlock.
+
+\section{Non-Deadlock Bugs}
+
+The two major types of non-deadlock bugs are \textbf{atomicity violation} and \textbf{order violation} bugs.
+
+An example of atomicity violation is if thread 1 checks some condition, and runs some code based on that condition, then thread 2 updates that condition right after, making thread 1's code likely wrong. This can be fixed with proper locking.
+
+An example of order violation is if thread 2 expects some data to be available by the time it runs, but thread 1 has been delayed and hasn't been able to provide the data. This can be fixed with condition variables.
+
+97\% of non-deadlock bugs in the study ended up being either atomicity or order violation bugs.
+
+\section{Deadlock Bugs}
+
+Deadlock can be seen from dependency graphs, where locks and threads are vertices and edges are dependencies. If there are cycles, then deadlock is possible.
+
+In large code bases, complex dependencies can lead to unforeseen deadlocks occuring. For example, a virtual memory system might need to access the file system for swapping, and the file system might need to access the virtual memory system for a page to perform this swap.
+
+\textbf{Encapsulation} is the idea of abstracting implementation details from parts of software to make stuff more modular. However, this doesn't work well with locking. For example, in Java, if \code{Vector v1, v2} are vectors and \code{v1.AddAll(v2)} and \code{v2.AddAll(v1)} are called by two different threads at the same time, deadlock can occur.
+
+Four conditions must hold in order for deadlock to occur:
+
+\begin{itemize}
+    \item Mutual exclusion, which means threads have exclusive control of resources.
+    \item Hold-and-wait, which means threads hold these resources while waiting for additional resources.
+    \item No preemption, which means locks cannot be forcibly removed from threads.
+    \item Circular wait, which means there is a cycle in the thread-lock dependency graph.
+\end{itemize}
+
+Circular waits are the most common condition to target. They can be prevented using \textbf{total ordering} on lock acquisition, meaning always acquiring locks in a specific order. If threads require multiple locks at once, the ordering can be guaranteed using the address of the locks. \textbf{Partial ordering} is used in more complex codebases, like Linux's memory mapping code, where multiple sets of threads follow a total ordering with each other.
+
+Hold-and-wait can be avoided by using locking to allow threads to acquire their locks ``atomically''. For example, forcing threads to acquire an overarching lock in order to acquire other locks means a thread can't be interrupted for another thread to claim a lock both of them need. As a downside, this will likely lead to decreased concurrency and performance.
+
+No preemption can be addressed with the help of more flexible locking interfaces that allow threads to check if a lock is free before acquiring it, which is useful in scenarios with multiple locks. This could lead to \textbf{livelock}, which occurs when two threads alternately obtain and give up a lock forever.
+
+Mutual exclusion can sometimes be eliminated with lock-free data structures and code, with the help of atomic instructions provided by hardware.
+
+If full knowledge of tasks is known and one has control over hardware, they can schedule threads to run such that there will never be deadlock.
+
+Database systems use deadlock detection and recovery techniques to provide continuous service. They build a resource dependency graph every once in a while and check for cycles, and either automatically restart the system, or are fixed manually.
+
+\section{Summary}
+

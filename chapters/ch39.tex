@@ -1,1 +1,95 @@
 \chapter{Files and Directions}
+
+\section{Files And Directories}
+
+Files and directories are abstractions of persistent storage devices.
+
+A \textbf{file} is a linear array of bytes, and is referred to as its \textbf{inode number}.
+
+A \textbf{directory} contains a set of files and directories.
+
+The directory hierarchy starts at the \textbf{root directory}, and if a directory tree is built starting here, it will contain all of the file system's files and directories.
+
+\section{The File System Interface and Creating Files}
+
+A file can be created with the \code{open()} system call with the \code{O\_CREAT} flag, or the \code{creat()} system call. They return a \textbf{file descriptor}, which is just an integer the process can use to identify a file and read to write to it. File descriptors are private per process, meaning the kernel maintains a struct called a \textbf{open file table} in each PCB containing them.
+
+\section{Reading And Writing Files \& \code{lseek()}}
+
+\textbf{strace} on Linux can trace the system calls made by a program. For example, \code{cat} makes calls to \code{open, read, write} (write for stdout file descriptor, \code{printf} calls this internally).
+
+In open file tables, the OS tracks file descriptors, as well as their current offsets, whether the files are readable or writeable, where the underlying files are located, and how many references there are to the file descriptor.
+
+\code{lseek()} is a system call that takes in a file descriptor, an offset, and an int identifying what to set the file descriptor's offset to. \code{read()} and \code{write()} implicitly update the offset, \code{lseek()} explicitly updates it.
+
+\section{Shared File Table Entries: \code{fork()} and \code{dup()}}
+
+Most of the time, entries of open file tables are independent. Sometimes they are shared, when a parent process creates a child process with \code{fork()}. These two processes can share open file table entries if a file descriptor was opened before the fork. The reference count of the file table entry is useful here, since all references to the file table entry need to be closed before it can be destroyed.
+
+The \code{dup()} system call allows a process to create a file descriptor referring to the same underlying file as an existing open file descriptor.
+
+\section{Writing Immediately with \code(fsync())}
+
+\code{write()} writes data to a buffer first before persistent storage. \code{fsync()} forces the buffer to be written to disk, and returns once the write is complete.
+
+\code{fsync()} also needs to be called on a newly created directory to ensure it actually exists before calling \code{fsync()} on a file in the directory.
+
+\section{Renaming Files}
+
+\code{mv} is implemented with the system call \code{rename}, which takes in an old file name and a new file name.
+
+\code{rename} is atomic with respect to system crashes, meaning if the system crashes during the renaming, the file will either be named the old name or the new name.
+
+\section{Getting Information About Files}
+
+The \code{stat()} and \code{fstat()} system calls are used to see metadata for a file. They read a \code{struct stat}, holding information like the device, protection, owner, block size, and timestamps.
+
+This information is usually stored in an \textbf{inode}, which resides on disk.
+
+\section{Removing Files}
+
+\code{rm} calls the \code{unlink()} system call.
+
+\section{Making Directories}
+
+When an empty directory is created, it automatically contains the entries \code{./} and \code{../}.
+
+\section{Reading Directories}
+
+The calls \code{opendir()}, \code{readdir()}, and \code{closedir()} can be used to get the contents of a directory. They do this by reading an array of \code{struct dirent}, which contains the filename, inode number, offset to the next dirent, and type of file. Note that \code{struct dirent} is distinct from \code{struct stat}
+
+\section{Deleting Directories}
+
+The \code{rmdir()} system call removes an empty directory.
+
+\section{Hard Links}
+
+The \code{link()} system call takes an old pathname and a new one, making the new pathname a pointer to the file pointed to by the old pathname. Specifically, they refer to the same inode number. The OS abstracts this by calling \code{link()} with a name the user provides, and an inode number it chooses itself.
+
+The inode contains a reference count, which like in file table entries, deletes something (the actual file on disk) once there are no more references to it. The number of references can be checked with \code{stat()}.
+
+Hard links cannot be created to directories, since this would create a cycle in the directory tree, which would mess up a lot of stuff.
+
+\section{Symbolic Links}
+
+\code{ln -s} creates a symbolic link. To \code{stat()}, a hard link appears exactly like the file it's linked to, but a symbolic link appears as a symbolic link. When running \code{ls -al}, the first character of the scary left column is \code{d, -, l} for directory, file, symbolic link.
+
+The size of the symbolic link file depends on the size of the pathname it points to.
+
+If a user removes a hard linked file, there is no possibility of a dangling reference, but there is with removing a file a symbolic link points to.
+
+\section{Permission Bits And Access Control Lists}
+
+The permission bits of a file are represented by characters 2-10 of the left column of \code{ls -l} (the first character represents the file type). 
+
+The first three of these characters determine what the owner can do, the next three determine what members of a specified group can do, and the last three determine what anyone else can do.
+
+The command \code{chmod}, followed by a three-digit number sets these permissions. Each digit is the OR of the readable, writeable, and executable bit.
+
+\textbf{Access control lists} are a more general way to represent who can access resources.
+
+\section{Making And Mounting A File System}
+
+What exactly is a file system? Is it OS-unique? Is WSL's storage its own file system inside the Windows file system?
+
+\section{Summary}

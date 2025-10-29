@@ -1,1 +1,52 @@
 \chapter{Event-based Concurrency}
+
+\textbf{Event-based} concurrency is often used in GUI-based applications and internet servers, like node.js.
+
+It attempts to address the difficulties of avoiding concurrency problems, and assuming the OS scheduler will schedule tasks fairly.
+
+\section{The Basic Idea: An Event Loop}
+
+An \textbf{event loop} is just a while loop that checks for events, and runs \textbf{event handlers} to handle any events.
+
+\section{An Important API: \code{select()} (or \code{poll()})}
+
+\code{select()} and \code{poll()} are system calls that check whether there is incoming I/O. 
+
+\code{select()} takes in a number of file descriptors $N$, arrays of read, write, and error file descriptors, and a timeout. It checks the first $N$ file descriptors in each array, replaces each set of FDs with its subset of ready FDs, and returns the total number of ready descriptors.
+
+Since it modifies the passed in array of file descriptors, the array needs to be re-initialized each time \code{select()} is called.
+
+\section{Using \code{select()}}
+
+The example shows a while true loop, with logic to initialize file descriptors, do a select, and process the ready file descriptors.
+
+\section{Why Simpler? No Locks Needed}
+
+Assuming a single CPU, since only one event is being handled at a time, there is no risk of context switching to a different event before an event is finished.
+
+\section{A Problem: Blocking System Calls}
+
+With usual multithreading, other threads can be switched to while one thread is waiting for an I/O request, or some other blocking operation. Since there is no switching in a single-threaded event-based server, a blocking system call blocks the entire server.
+
+\section{A Solution: Asynchronous I/O}
+
+\textbf{Asynchronous I/O} allows processes to issue I/O requests and immediately return control to the caller.
+
+To issue an asynchronous I/O request, processes create a \textbf{AIO control block}, or \code{struct aiocb}, which contains a file descriptor, offset, location of the buffer, and number of bytes to transfer. This is called with \code{aio\_read()} (on mac), and the application can poll for when the request is finished with \code{aio\_error()}.
+
+Some systems like UNIX \textbf{signal} to a process when an asynchronous I/O request finishes. When a process receives a signal, it immediately jumps to a signal handler, which the user can customize.
+
+\section{Another Problem: State Management}
+
+\textbf{Manual stack management} (name seems to be kind of misleading) is needed to process asynchronus I/O requests, since the stack of one event handler that issues the request might not be the same as the stack of the event handler that gets the response. The solution is to save the information needed to handle the response in a data structure (presumably on the heap?), to allow an event handler to pick up where another left off.
+
+\section{What Is Still Difficult With Events}
+
+Users will have to deal with the dangers of multithreading if multithreading across multiple processors.
+
+In single threaded systems, other blocking other than I/O requests can occur, like a page fault, which will also completely block the process.
+
+The exact semantics of various routines change over time, meaning developers need to be on the lookout on what routines change from non-blocking to blocking (isn't this true for everything though?).
+
+\section{Summary}
+

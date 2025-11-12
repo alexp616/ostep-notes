@@ -1,1 +1,18 @@
 \chapter{Fast File System (FFS)}
+
+When UNIX was first introduced, its file system involved just had a superblock, inodes, and datablocks.
+
+\section{The Problem: Poor Performance \& FFS: Disk Awareness Is The Solution}
+
+This file system performed poorly because:
+
+\begin{itemize}
+    \item The disk's storage was treated just like RAM.
+    \item The disk would become fragmented, as seen in heap allocations. (This gave rise to disk \textbf{defragmentation} tools, which reorganize data to place files contiguously).
+    \item The block size, 512 bytes, was too small. It helped reduce \textbf{internal fragmentation}, fragmentation within the block, but was terrible for bandwith.
+\end{itemize}
+
+Researchers built a file system called the \textbf{Fast File System}, which followed the idea to make data structures and allocation structures more ``disk aware''. They kept the same API calls, but changed the implementations.
+
+\section{Organizing Structure: The Cylinder Group}
+

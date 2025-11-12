@@ -1,1 +1,19 @@
 \chapter{Multi-CPU Scheduling}
+
+\section{Background: Multiprocessor Architecture}
+
+Caching with multiple processors is very complicated. If CPU A loads data at address $p$ in its cache, then writes to it, updating its cache but not the value in memory, and CPU B loads data at that address, then we have a race condition. This issue is called \textbf{cache coherence}.
+
+A \textbf{write-back cache} is a cache that writes to cache memory, and later flushes changes to main memory.
+
+A solution is to have hardware handle it, with a technique like \textbf{bus snooping}. When a CPU sees an update for data in its cache, it \textbf{invalidates} its copy.
+
+\section{Cache Affinity}
+
+When a process gets ran again after being switched from, it should run on the same CPU, since it likely has a lot of state built up in the TLB and caches on the CPU. This is called \textbf{cache affinity}.
+
+*context switches don't save CPU cache or TLB?
+
+\section{Single-Queue Scheduling}
+
+
